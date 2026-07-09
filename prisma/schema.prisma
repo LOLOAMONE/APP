@@ -1,0 +1,96 @@
+// Schéma de la base de données du gestionnaire de restaurant.
+// Note: le connecteur SQLite ne supporte pas les enums natifs Prisma,
+// les champs "rôle/type/statut" sont donc des String validés côté application (voir src/lib/validation.ts).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  role         String   // "ADMIN" | "EMPLOYEE"
+  employee     Employee?
+  createdAt    DateTime @default(now())
+}
+
+model Employee {
+  id          String   @id @default(cuid())
+  name        String
+  position    String
+  hourlyRate  Float?
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shifts      Shift[]
+  absences    Absence[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Ingredient {
+  id            String                 @id @default(cuid())
+  name          String
+  unit          String                 // "kg" | "L" | "piece"
+  price         Float                  // prix d'achat actuel, dans l'unité ci-dessus
+  supplier      String?
+  priceHistory  IngredientPriceHistory[]
+  productLinks  ProductIngredient[]
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+}
+
+model IngredientPriceHistory {
+  id           String     @id @default(cuid())
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  price        Float
+  recordedAt   DateTime   @default(now())
+}
+
+model Product {
+  id              String              @id @default(cuid())
+  name            String
+  priceOnSite     Float               // prix de vente TTC sur place
+  priceTakeaway   Float               // prix de vente TTC à emporter
+  ingredients     ProductIngredient[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+}
+
+model ProductIngredient {
+  id           String     @id @default(cuid())
+  productId    String
+  product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredientId String
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  quantity     Float      // quantité dans quantityUnit
+  quantityUnit String     // "g" | "kg" | "mL" | "L" | "piece"
+}
+
+model Shift {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date       String   // "YYYY-MM-DD"
+  startTime  String   // "HH:mm"
+  endTime    String   // "HH:mm"
+  createdAt  DateTime @default(now())
+}
+
+model Absence {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate  String   // "YYYY-MM-DD"
+  endDate    String   // "YYYY-MM-DD"
+  type       String   // "CONGE_PAYE" | "MALADIE" | "AUTRE"
+  status     String   @default("APPROVED") // "PENDING" | "APPROVED" | "REJECTED"
+  note       String?
+  createdAt  DateTime @default(now())
+}

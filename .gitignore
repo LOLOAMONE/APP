@@ -1,0 +1,11 @@
+.claude/settings.local.json
+node_modules
+.next
+out
+build
+.env
+.env.local
+*.db
+*.db-journal
+.DS_Store
+npm-debug.log*

@@ -1,0 +1,58 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
+import { withErrorHandling } from "@/lib/api";
+import { RECIPE_QUANTITY_UNITS } from "@/lib/margins";
+
+const productSchema = z.object({
+  name: z.string().min(1),
+  priceOnSite: z.number().nonnegative(),
+  priceTakeaway: z.number().nonnegative(),
+  ingredients: z
+    .array(
+      z.object({
+        ingredientId: z.string().min(1),
+        quantity: z.number().positive(),
+        quantityUnit: z.enum(RECIPE_QUANTITY_UNITS),
+      })
+    )
+    .min(1, "Ajoutez au moins un ingrédient"),
+});
+
+export const PUT = withErrorHandling(
+  async (req: NextRequest, { params }: { params: { id: string } }) => {
+    await requireAdmin();
+    const data = productSchema.parse(await req.json());
+
+    const product = await prisma.$transaction(async (tx) => {
+      await tx.productIngredient.deleteMany({ where: { productId: params.id } });
+      return tx.product.update({
+        where: { id: params.id },
+        data: {
+          name: data.name,
+          priceOnSite: data.priceOnSite,
+          priceTakeaway: data.priceTakeaway,
+          ingredients: {
+            create: data.ingredients.map((i) => ({
+              ingredientId: i.ingredientId,
+              quantity: i.quantity,
+              quantityUnit: i.quantityUnit,
+            })),
+          },
+        },
+        include: { ingredients: { include: { ingredient: true } } },
+      });
+    });
+
+    return NextResponse.json(product);
+  }
+);
+
+export const DELETE = withErrorHandling(
+  async (_req: NextRequest, { params }: { params: { id: string } }) => {
+    await requireAdmin();
+    await prisma.product.delete({ where: { id: params.id } });
+    return NextResponse.json({ ok: true });
+  }
+);
