@@ -38,9 +38,14 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     employeeName: user.employee?.name ?? null,
   });
 
+  // Le cookie "Secure" exige HTTPS : on se base sur la requête réelle (via le reverse proxy)
+  // plutôt que sur NODE_ENV, sinon la connexion échoue silencieusement tant que le site n'a pas de certificat SSL.
+  const forwardedProto = req.headers.get("x-forwarded-proto");
+  const isHttps = forwardedProto ? forwardedProto === "https" : req.nextUrl.protocol === "https:";
+
   res.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isHttps,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_DURATION_SECONDS,
