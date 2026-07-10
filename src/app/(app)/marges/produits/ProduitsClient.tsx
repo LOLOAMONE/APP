@@ -33,11 +33,14 @@ type MarginBlock = {
 type Product = {
   id: string;
   name: string;
+  category: string;
   priceOnSite: number;
   priceTakeaway: number;
   ingredients: ProductIngredientRow[];
   margins: { onSite: MarginBlock; takeaway: MarginBlock };
 };
+
+const KNOWN_CATEGORIES = ["Cordon Bleu", "Extras", "Sauces", "Dessert", "Boissons", "Autre"];
 
 type FormLine = {
   ingredientId: string;
@@ -77,12 +80,14 @@ export function ProduitsClient() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("onSitePercent");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [name, setName] = useState("");
+  const [category, setCategory] = useState(KNOWN_CATEGORIES[0]);
   const [priceOnSite, setPriceOnSite] = useState("");
   const [priceTakeaway, setPriceTakeaway] = useState("");
   const [lines, setLines] = useState<FormLine[]>([]);
@@ -104,6 +109,7 @@ export function ProduitsClient() {
   function openCreate() {
     setEditing(null);
     setName("");
+    setCategory(KNOWN_CATEGORIES[0]);
     setPriceOnSite("");
     setPriceTakeaway("");
     setLines(ingredients.length ? [emptyLine(ingredients)] : []);
@@ -114,6 +120,7 @@ export function ProduitsClient() {
   function openEdit(p: Product) {
     setEditing(p);
     setName(p.name);
+    setCategory(p.category);
     setPriceOnSite(String(p.priceOnSite));
     setPriceTakeaway(String(p.priceTakeaway));
     setLines(
@@ -172,6 +179,7 @@ export function ProduitsClient() {
 
     const payload = {
       name,
+      category,
       priceOnSite: parseFloat(priceOnSite),
       priceTakeaway: parseFloat(priceTakeaway),
       ingredients: lines
@@ -220,8 +228,17 @@ export function ProduitsClient() {
     }
   }
 
+  const categories = useMemo(
+    () => Array.from(new Set(products.map((p) => p.category))).sort(),
+    [products]
+  );
+
   const rows = useMemo(() => {
-    const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+    const filtered = products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(search.toLowerCase()) &&
+        (!categoryFilter || p.category === categoryFilter)
+    );
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.name.localeCompare(b.name);
@@ -230,7 +247,7 @@ export function ProduitsClient() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return sorted;
-  }, [products, search, sortKey, sortDir]);
+  }, [products, search, categoryFilter, sortKey, sortDir]);
 
   const sortArrow = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
 
@@ -238,7 +255,19 @@ export function ProduitsClient() {
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-gray-900">Produits &amp; marges</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="w-full sm:w-44"
+          >
+            <option value="">Toutes catégories</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
           <input
             placeholder="Rechercher un produit..."
             value={search}
@@ -264,6 +293,7 @@ export function ProduitsClient() {
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
                   Produit{sortArrow("name")}
                 </th>
+                <th>Catégorie</th>
                 <th>Coût sur place</th>
                 <th>Coût à emporter</th>
                 <th>Prix sur place (TTC)</th>
@@ -281,6 +311,7 @@ export function ProduitsClient() {
               {rows.map((p) => (
                 <tr key={p.id}>
                   <td className="font-medium">{p.name}</td>
+                  <td className="text-gray-500">{p.category}</td>
                   <td>{p.margins.onSite.cost.toFixed(2)} €</td>
                   <td>{p.margins.takeaway.cost.toFixed(2)} €</td>
                   <td>{p.priceOnSite.toFixed(2)} €</td>
@@ -305,7 +336,7 @@ export function ProduitsClient() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-6 text-center text-gray-400">
+                  <td colSpan={9} className="py-6 text-center text-gray-400">
                     Aucun produit
                   </td>
                 </tr>
@@ -323,9 +354,21 @@ export function ProduitsClient() {
             </p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Nom du produit</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className="w-full" required />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Nom du produit</label>
+                  <input value={name} onChange={(e) => setName(e.target.value)} className="w-full" required />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Catégorie</label>
+                  <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full">
+                    {KNOWN_CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

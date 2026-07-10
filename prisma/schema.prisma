@@ -56,6 +56,7 @@ model IngredientPriceHistory {
 model Product {
   id              String              @id @default(cuid())
   name            String
+  category        String              @default("Autre")
   priceOnSite     Float               // prix de vente TTC sur place
   priceTakeaway   Float               // prix de vente TTC à emporter
   ingredients     ProductIngredient[]

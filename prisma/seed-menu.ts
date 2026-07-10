@@ -67,17 +67,19 @@ function boissonSoftLine(matiere: string, sticker: string) {
 
 const productsData: {
   name: string;
+  category: string;
   priceOnSite: number;
   priceTakeaway: number;
   ingredients: { ingredient: string; quantity: number; quantityUnit: string; channel: Channel }[];
 }[] = [
-  { name: "Gérard", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Gérard", "Sticker Gérard") },
-  { name: "Brigitte", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Brigitte", "Sticker Brigitte") },
-  { name: "Babette", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Babette", "Sticker Babette") },
-  { name: "Gilbert", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Gilbert", "Sticker Gilbert") },
-  { name: "Saison", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Saison", "Sticker Saison") },
+  { name: "Gérard", category: "Cordon Bleu", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Gérard", "Sticker Gérard") },
+  { name: "Brigitte", category: "Cordon Bleu", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Brigitte", "Sticker Brigitte") },
+  { name: "Babette", category: "Cordon Bleu", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Babette", "Sticker Babette") },
+  { name: "Gilbert", category: "Cordon Bleu", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Gilbert", "Sticker Gilbert") },
+  { name: "Saison", category: "Cordon Bleu", priceOnSite: 10.9, priceTakeaway: 10.9, ingredients: cordonBleuLine("Cordon bleu Saison", "Sticker Saison") },
   {
     name: "Canaillou x3",
+    category: "Cordon Bleu",
     priceOnSite: 9.9,
     priceTakeaway: 9.9,
     ingredients: [
@@ -91,6 +93,7 @@ const productsData: {
   },
   {
     name: "Pommes noisettes",
+    category: "Extras",
     priceOnSite: 4,
     priceTakeaway: 4,
     ingredients: [
@@ -99,11 +102,12 @@ const productsData: {
       { ingredient: "Boîte pommes noisettes (à emporter)", quantity: 1, quantityUnit: "piece", channel: "EMPORTER" },
     ],
   },
-  { name: "Ketchup", priceOnSite: 0.9, priceTakeaway: 0.6, ingredients: [{ ingredient: "Ketchup", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
-  { name: "Mayonnaise", priceOnSite: 0.9, priceTakeaway: 0.6, ingredients: [{ ingredient: "Mayonnaise", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
-  { name: "Moutarde", priceOnSite: 0.9, priceTakeaway: 0.6, ingredients: [{ ingredient: "Moutarde", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
+  { name: "Ketchup", category: "Sauces", priceOnSite: 0.9, priceTakeaway: 0.6, ingredients: [{ ingredient: "Ketchup", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
+  { name: "Mayonnaise", category: "Sauces", priceOnSite: 0.9, priceTakeaway: 0.6, ingredients: [{ ingredient: "Mayonnaise", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
+  { name: "Moutarde", category: "Sauces", priceOnSite: 0.9, priceTakeaway: 0.6, ingredients: [{ ingredient: "Moutarde", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
   {
     name: "Pitchoune Chocolat",
+    category: "Dessert",
     priceOnSite: 4,
     priceTakeaway: 4,
     ingredients: [
@@ -111,12 +115,12 @@ const productsData: {
       { ingredient: "Sachet pitchoune (à emporter)", quantity: 1, quantityUnit: "piece", channel: "EMPORTER" },
     ],
   },
-  { name: "Eau plate (50cl)", priceOnSite: 3, priceTakeaway: 3, ingredients: [{ ingredient: "Eau plate Evian 50cl", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
-  { name: "Eau pétillante (50cl)", priceOnSite: 3, priceTakeaway: 3, ingredients: [{ ingredient: "Eau Badoit 50cl", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
-  { name: "Citronade 33cl", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Citronnade / Limonade", "Sticker boisson Citronnade") },
-  { name: "Limonade 33cl", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Citronnade / Limonade", "Sticker boisson Limonade") },
-  { name: "Oranginade 33cl", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Oranginade", "Sticker boisson Oranginade") },
-  { name: "Thé vert pêche 33cl", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Thé pêche", "Sticker boisson Thé pêche") },
+  { name: "Eau plate (50cl)", category: "Boissons", priceOnSite: 3, priceTakeaway: 3, ingredients: [{ ingredient: "Eau plate Evian 50cl", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
+  { name: "Eau pétillante (50cl)", category: "Boissons", priceOnSite: 3, priceTakeaway: 3, ingredients: [{ ingredient: "Eau Badoit 50cl", quantity: 1, quantityUnit: "piece", channel: "BOTH" }] },
+  { name: "Citronade 33cl", category: "Boissons", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Citronnade / Limonade", "Sticker boisson Citronnade") },
+  { name: "Limonade 33cl", category: "Boissons", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Citronnade / Limonade", "Sticker boisson Limonade") },
+  { name: "Oranginade 33cl", category: "Boissons", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Oranginade", "Sticker boisson Oranginade") },
+  { name: "Thé vert pêche 33cl", category: "Boissons", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Thé pêche", "Sticker boisson Thé pêche") },
 ];
 
 async function upsertIngredient(data: { name: string; unit: IngredientUnit; price: number }) {
@@ -152,12 +156,18 @@ async function upsertProduct(
     await prisma.productIngredient.deleteMany({ where: { productId: existing.id } });
     await prisma.product.update({
       where: { id: existing.id },
-      data: { priceOnSite: data.priceOnSite, priceTakeaway: data.priceTakeaway, ingredients: { create: ingredients } },
+      data: {
+        category: data.category,
+        priceOnSite: data.priceOnSite,
+        priceTakeaway: data.priceTakeaway,
+        ingredients: { create: ingredients },
+      },
     });
   } else {
     await prisma.product.create({
       data: {
         name: data.name,
+        category: data.category,
         priceOnSite: data.priceOnSite,
         priceTakeaway: data.priceTakeaway,
         ingredients: { create: ingredients },

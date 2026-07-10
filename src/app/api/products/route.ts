@@ -14,6 +14,7 @@ import {
 
 const productSchema = z.object({
   name: z.string().min(1),
+  category: z.string().min(1).default("Autre"),
   priceOnSite: z.number().nonnegative(),
   priceTakeaway: z.number().nonnegative(),
   ingredients: z
@@ -64,6 +65,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   const product = await prisma.product.create({
     data: {
       name: data.name,
+      category: data.category,
       priceOnSite: data.priceOnSite,
       priceTakeaway: data.priceTakeaway,
       ingredients: {
