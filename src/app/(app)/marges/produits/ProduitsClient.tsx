@@ -90,7 +90,6 @@ export function ProduitsClient() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("onSitePercent");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
@@ -238,17 +237,8 @@ export function ProduitsClient() {
     }
   }
 
-  const categories = useMemo(
-    () => Array.from(new Set(products.map((p) => p.category))).sort(),
-    [products]
-  );
-
   const rows = useMemo(() => {
-    const filtered = products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) &&
-        (!categoryFilter || p.category === categoryFilter)
-    );
+    const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.name.localeCompare(b.name);
@@ -257,7 +247,20 @@ export function ProduitsClient() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return sorted;
-  }, [products, search, categoryFilter, sortKey, sortDir]);
+  }, [products, search, sortKey, sortDir]);
+
+  const groupedRows = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    for (const p of rows) {
+      if (!map.has(p.category)) map.set(p.category, []);
+      map.get(p.category)!.push(p);
+    }
+    const orderedCategories = [
+      ...KNOWN_CATEGORIES.filter((c) => map.has(c)),
+      ...Array.from(map.keys()).filter((c) => !KNOWN_CATEGORIES.includes(c)).sort(),
+    ];
+    return orderedCategories.map((cat) => ({ category: cat, items: map.get(cat)! }));
+  }, [rows]);
 
   const sortArrow = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
 
@@ -266,18 +269,6 @@ export function ProduitsClient() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-gray-900">Produits &amp; marges</h1>
         <div className="flex flex-wrap gap-2">
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full sm:w-44"
-          >
-            <option value="">Toutes catégories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
           <input
             placeholder="Rechercher un produit..."
             value={search}
@@ -295,64 +286,64 @@ export function ProduitsClient() {
 
       {loading ? (
         <p className="text-sm text-gray-500">Chargement...</p>
+      ) : rows.length === 0 ? (
+        <p className="py-6 text-center text-gray-400">Aucun produit</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table>
-            <thead>
-              <tr>
-                <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
-                  Produit{sortArrow("name")}
-                </th>
-                <th>Catégorie</th>
-                <th>Coût sur place</th>
-                <th>Coût à emporter</th>
-                <th>Prix sur place (TTC)</th>
-                <th className="cursor-pointer select-none" onClick={() => toggleSort("onSitePercent")}>
-                  Marge sur place{sortArrow("onSitePercent")}
-                </th>
-                <th>Prix à emporter (TTC)</th>
-                <th className="cursor-pointer select-none" onClick={() => toggleSort("takeawayPercent")}>
-                  Marge à emporter{sortArrow("takeawayPercent")}
-                </th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p) => (
-                <tr key={p.id}>
-                  <td className="font-medium">{p.name}</td>
-                  <td className="text-gray-500">{p.category}</td>
-                  <td>{p.margins.onSite.cost.toFixed(2)} €</td>
-                  <td>{p.margins.takeaway.cost.toFixed(2)} €</td>
-                  <td>{p.priceOnSite.toFixed(2)} €</td>
-                  <td className={p.margins.onSite.marginPercent < 0 ? "text-red-600" : ""}>
-                    {p.margins.onSite.marginEuros.toFixed(2)} € ({p.margins.onSite.marginPercent.toFixed(0)}%)
-                  </td>
-                  <td>{p.priceTakeaway.toFixed(2)} €</td>
-                  <td className={p.margins.takeaway.marginPercent < 0 ? "text-red-600" : ""}>
-                    {p.margins.takeaway.marginEuros.toFixed(2)} € ({p.margins.takeaway.marginPercent.toFixed(0)}%)
-                  </td>
-                  <td>
-                    <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                      <button onClick={() => openEdit(p)} className="text-brand-600 hover:text-brand-800">
-                        Modifier
-                      </button>
-                      <button onClick={() => handleDelete(p)} className="text-red-600 hover:text-red-800">
-                        Supprimer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="py-6 text-center text-gray-400">
-                    Aucun produit
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        <div className="space-y-8">
+          {groupedRows.map(({ category, items }) => (
+            <div key={category}>
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">{category}</h2>
+              <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                <table>
+                  <thead>
+                    <tr>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                        Produit{sortArrow("name")}
+                      </th>
+                      <th>Coût sur place</th>
+                      <th>Coût à emporter</th>
+                      <th>Prix sur place (TTC)</th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("onSitePercent")}>
+                        Marge sur place{sortArrow("onSitePercent")}
+                      </th>
+                      <th>Prix à emporter (TTC)</th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("takeawayPercent")}>
+                        Marge à emporter{sortArrow("takeawayPercent")}
+                      </th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((p) => (
+                      <tr key={p.id}>
+                        <td className="font-medium">{p.name}</td>
+                        <td>{p.margins.onSite.cost.toFixed(2)} €</td>
+                        <td>{p.margins.takeaway.cost.toFixed(2)} €</td>
+                        <td>{p.priceOnSite.toFixed(2)} €</td>
+                        <td className={p.margins.onSite.marginPercent < 0 ? "text-red-600" : ""}>
+                          {p.margins.onSite.marginEuros.toFixed(2)} € ({p.margins.onSite.marginPercent.toFixed(0)}%)
+                        </td>
+                        <td>{p.priceTakeaway.toFixed(2)} €</td>
+                        <td className={p.margins.takeaway.marginPercent < 0 ? "text-red-600" : ""}>
+                          {p.margins.takeaway.marginEuros.toFixed(2)} € ({p.margins.takeaway.marginPercent.toFixed(0)}%)
+                        </td>
+                        <td>
+                          <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
+                            <button onClick={() => openEdit(p)} className="text-brand-600 hover:text-brand-800">
+                              Modifier
+                            </button>
+                            <button onClick={() => handleDelete(p)} className="text-red-600 hover:text-red-800">
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
