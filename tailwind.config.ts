@@ -5,18 +5,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Palette reprise de la charte Amoné (restaurants-amone.com) : bordeaux principal + doré en accent.
+        // Couleur officielle de la charte Amoné : RVB 101/11/27, Pantone 56-16 C.
         brand: {
-          50: "#faf0f2",
-          100: "#f3dde2",
-          200: "#e7bbc6",
-          300: "#d78ea0",
-          400: "#c55974",
-          500: "#aa3c57",
-          600: "#832e43",
-          700: "#622232",
-          800: "#4b1b27",
-          900: "#39141d",
+          50: "#fdedf0",
+          100: "#fad6dc",
+          200: "#f6acb9",
+          300: "#ef6c83",
+          400: "#e72245",
+          500: "#a6122c",
+          600: "#650b1b",
+          700: "#450812",
+          800: "#33060e",
+          900: "#25040a",
         },
         gold: {
           50: "#f9f6f1",
