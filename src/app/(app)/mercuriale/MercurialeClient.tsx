@@ -35,6 +35,10 @@ const emptySupplierForm = {
   notes: "",
 };
 
+function isUrl(value: string | null): value is string {
+  return !!value && /^https?:\/\//i.test(value);
+}
+
 const emptyItemForm = {
   reference: "",
   designation: "",
@@ -344,6 +348,7 @@ export function MercurialeClient() {
               <thead>
                 <tr>
                   <th>Référence</th>
+                  <th>Lien</th>
                   <th>Désignation</th>
                   <th>Conditionnement</th>
                   <th>Commande</th>
@@ -355,7 +360,19 @@ export function MercurialeClient() {
               <tbody>
                 {filteredItems.map((i) => (
                   <tr key={i.id}>
-                    <td className="text-gray-500">{i.reference || "—"}</td>
+                    <td className="text-gray-500">{isUrl(i.reference) ? "—" : i.reference || "—"}</td>
+                    <td>
+                      {isUrl(i.reference) && (
+                        <a
+                          href={i.reference}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
+                        >
+                          🔗 Voir
+                        </a>
+                      )}
+                    </td>
                     <td className="max-w-xs whitespace-pre-line font-medium">{i.designation}</td>
                     <td className="text-gray-500">{i.packaging || "—"}</td>
                     <td>
@@ -384,7 +401,7 @@ export function MercurialeClient() {
                 ))}
                 {filteredItems.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-6 text-center text-gray-400">
+                    <td colSpan={8} className="py-6 text-center text-gray-400">
                       Aucun article
                     </td>
                   </tr>
