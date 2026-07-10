@@ -10,6 +10,7 @@
     "postinstall": "prisma generate",
     "seed": "tsx prisma/seed.ts",
     "seed:menu": "tsx prisma/seed-menu.ts",
+    "seed:mercuriale": "tsx prisma/seed-mercuriale.ts",
     "migrate": "prisma migrate dev"
   },
   "prisma": {

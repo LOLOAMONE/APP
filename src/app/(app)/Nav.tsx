@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 const TABS = [
   { href: "/marges", label: "Marges", adminOnly: true },
+  { href: "/mercuriale", label: "Mercuriale", adminOnly: true },
   { href: "/planning", label: "Planning", adminOnly: false },
 ];
 

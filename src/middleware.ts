@@ -24,13 +24,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const isMargesRoute =
+  const isAdminOnlyRoute =
     pathname.startsWith("/marges") ||
+    pathname.startsWith("/mercuriale") ||
     pathname.startsWith("/api/ingredients") ||
     pathname.startsWith("/api/products") ||
-    pathname.startsWith("/api/menus");
+    pathname.startsWith("/api/menus") ||
+    pathname.startsWith("/api/suppliers") ||
+    pathname.startsWith("/api/supplier-items");
 
-  if (isMargesRoute && session.role !== "ADMIN") {
+  if (isAdminOnlyRoute && session.role !== "ADMIN") {
     if (isApi) {
       return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
     }
