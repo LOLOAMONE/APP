@@ -6,8 +6,12 @@ import { withErrorHandling } from "@/lib/api";
 
 const supplierSchema = z.object({
   name: z.string().min(1),
-  contactInfo: z.string().optional().nullable(),
-  orderInfo: z.string().optional().nullable(),
+  orderSchedule: z.string().optional().nullable(),
+  minimumOrder: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  clientCode: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
 });
 
 export const GET = withErrorHandling(async () => {

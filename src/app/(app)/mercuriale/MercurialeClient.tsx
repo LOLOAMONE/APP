@@ -16,9 +16,23 @@ type SupplierItem = {
 type Supplier = {
   id: string;
   name: string;
-  contactInfo: string | null;
-  orderInfo: string | null;
+  orderSchedule: string | null;
+  minimumOrder: string | null;
+  email: string | null;
+  phone: string | null;
+  clientCode: string | null;
+  notes: string | null;
   items: SupplierItem[];
+};
+
+const emptySupplierForm = {
+  name: "",
+  orderSchedule: "",
+  minimumOrder: "",
+  email: "",
+  phone: "",
+  clientCode: "",
+  notes: "",
 };
 
 const emptyItemForm = {
@@ -38,9 +52,7 @@ export function MercurialeClient() {
 
   const [showSupplierForm, setShowSupplierForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [supplierName, setSupplierName] = useState("");
-  const [supplierContact, setSupplierContact] = useState("");
-  const [supplierOrderInfo, setSupplierOrderInfo] = useState("");
+  const [supplierForm, setSupplierForm] = useState(emptySupplierForm);
 
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<SupplierItem | null>(null);
@@ -78,18 +90,22 @@ export function MercurialeClient() {
 
   function openCreateSupplier() {
     setEditingSupplier(null);
-    setSupplierName("");
-    setSupplierContact("");
-    setSupplierOrderInfo("");
+    setSupplierForm(emptySupplierForm);
     setError(null);
     setShowSupplierForm(true);
   }
 
   function openEditSupplier(s: Supplier) {
     setEditingSupplier(s);
-    setSupplierName(s.name);
-    setSupplierContact(s.contactInfo ?? "");
-    setSupplierOrderInfo(s.orderInfo ?? "");
+    setSupplierForm({
+      name: s.name,
+      orderSchedule: s.orderSchedule ?? "",
+      minimumOrder: s.minimumOrder ?? "",
+      email: s.email ?? "",
+      phone: s.phone ?? "",
+      clientCode: s.clientCode ?? "",
+      notes: s.notes ?? "",
+    });
     setError(null);
     setShowSupplierForm(true);
   }
@@ -98,7 +114,15 @@ export function MercurialeClient() {
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const payload = { name: supplierName, contactInfo: supplierContact || null, orderInfo: supplierOrderInfo || null };
+    const payload = {
+      name: supplierForm.name,
+      orderSchedule: supplierForm.orderSchedule || null,
+      minimumOrder: supplierForm.minimumOrder || null,
+      email: supplierForm.email || null,
+      phone: supplierForm.phone || null,
+      clientCode: supplierForm.clientCode || null,
+      notes: supplierForm.notes || null,
+    };
     const url = editingSupplier ? `/api/suppliers/${editingSupplier.id}` : "/api/suppliers";
     const method = editingSupplier ? "PUT" : "POST";
     try {
@@ -245,15 +269,50 @@ export function MercurialeClient() {
 
       {selected && (
         <div>
-          <div className="mb-4 flex flex-col justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row">
-            <div className="space-y-1 text-sm text-gray-600">
-              {selected.orderInfo && <p className="whitespace-pre-line">{selected.orderInfo}</p>}
-              {selected.contactInfo && (
-                <p className="whitespace-pre-line text-gray-500">{selected.contactInfo}</p>
+          <div className="mb-4 flex flex-col justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-start">
+            <div className="grid gap-x-6 gap-y-1.5 text-sm text-gray-600 sm:grid-cols-2">
+              {selected.orderSchedule && (
+                <p className="flex items-start gap-2">
+                  <span>📅</span>
+                  <span>{selected.orderSchedule}</span>
+                </p>
               )}
-              {!selected.orderInfo && !selected.contactInfo && (
-                <p className="text-gray-400">Aucune information de commande renseignée.</p>
+              {selected.minimumOrder && (
+                <p className="flex items-start gap-2">
+                  <span>📦</span>
+                  <span>Franco : {selected.minimumOrder}</span>
+                </p>
               )}
+              {selected.email && (
+                <p className="flex items-start gap-2">
+                  <span>📧</span>
+                  <span>{selected.email}</span>
+                </p>
+              )}
+              {selected.phone && (
+                <p className="flex items-start gap-2">
+                  <span>☎️</span>
+                  <span>{selected.phone}</span>
+                </p>
+              )}
+              {selected.clientCode && (
+                <p className="flex items-start gap-2">
+                  <span>🔖</span>
+                  <span>Code client : {selected.clientCode}</span>
+                </p>
+              )}
+              {selected.notes && (
+                <p className="flex items-start gap-2 sm:col-span-2">
+                  <span>📝</span>
+                  <span className="whitespace-pre-line">{selected.notes}</span>
+                </p>
+              )}
+              {!selected.orderSchedule &&
+                !selected.minimumOrder &&
+                !selected.email &&
+                !selected.phone &&
+                !selected.clientCode &&
+                !selected.notes && <p className="text-gray-400">Aucune information renseignée.</p>}
             </div>
             <div className="flex shrink-0 gap-3 text-sm">
               <button onClick={() => openEditSupplier(selected)} className="text-brand-600 hover:text-brand-800">
@@ -344,26 +403,66 @@ export function MercurialeClient() {
           <form onSubmit={handleSupplierSubmit} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Nom du fournisseur</label>
-              <input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} className="w-full" required />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Infos de commande (jour, délai, franco...)
-              </label>
-              <textarea
-                value={supplierOrderInfo}
-                onChange={(e) => setSupplierOrderInfo(e.target.value)}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                rows={3}
+              <input
+                value={supplierForm.name}
+                onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                className="w-full"
+                required
               />
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">
-                Contact (email, téléphone, code client...)
+                📅 Commande &amp; livraison
               </label>
+              <input
+                placeholder="ex : Lundi avant 10h pour livraison mercredi"
+                value={supplierForm.orderSchedule}
+                onChange={(e) => setSupplierForm({ ...supplierForm, orderSchedule: e.target.value })}
+                className="w-full"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">📦 Franco / minimum</label>
+                <input
+                  placeholder="ex : 400€ HT ou 10 Bibs"
+                  value={supplierForm.minimumOrder}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, minimumOrder: e.target.value })}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">🔖 Code client</label>
+                <input
+                  value={supplierForm.clientCode}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, clientCode: e.target.value })}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">📧 Email</label>
+                <input
+                  value={supplierForm.email}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">☎️ Téléphone</label>
+                <input
+                  value={supplierForm.phone}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
+                  className="w-full"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">📝 Notes (optionnel)</label>
               <textarea
-                value={supplierContact}
-                onChange={(e) => setSupplierContact(e.target.value)}
+                value={supplierForm.notes}
+                onChange={(e) => setSupplierForm({ ...supplierForm, notes: e.target.value })}
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 rows={2}
               />

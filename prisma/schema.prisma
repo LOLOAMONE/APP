@@ -96,13 +96,17 @@ model ProductIngredient {
 }
 
 model Supplier {
-  id          String         @id @default(cuid())
-  name        String
-  contactInfo String?        // emails, téléphone, code client (texte libre)
-  orderInfo   String?        // jour/délai de commande, livraison, minimum franco (texte libre)
-  items       SupplierItem[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  name          String
+  orderSchedule String?        // jour/délai de commande et de livraison
+  minimumOrder  String?        // franco / minimum de commande
+  email         String?
+  phone         String?
+  clientCode    String?
+  notes         String?        // toute autre information libre
+  items         SupplierItem[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model SupplierItem {

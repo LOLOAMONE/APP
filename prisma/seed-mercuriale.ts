@@ -9,16 +9,24 @@ type ItemTuple = [string | null, string, string | null, number, number | null, n
 
 type SupplierData = {
   name: string;
-  orderInfo: string | null;
-  contactInfo: string | null;
+  orderSchedule: string | null;
+  minimumOrder: string | null;
+  email: string | null;
+  phone: string | null;
+  clientCode: string | null;
+  notes: string | null;
   items: ItemTuple[];
 };
 
 const suppliers: SupplierData[] = [
   {
     name: "Chacun son café",
-    orderInfo: "Commande A pour C (LUNDI avant 10H pour Mercredi)\nFranco : 10 Bibs",
-    contactInfo: "Sandy@chacunsoncafe.fr\nasli.gurbuz@amone.fr (suivi premiers mois)",
+    orderSchedule: "Commande A pour C — lundi avant 10h pour mercredi",
+    minimumOrder: "10 Bibs",
+    email: "Sandy@chacunsoncafe.fr, asli.gurbuz@amone.fr (suivi premiers mois)",
+    phone: null,
+    clientCode: null,
+    notes: null,
     items: [
       [null, "Ice tea pêche", "Bib de 5L", 0, 40.5, null],
       [null, "Limonade", "Bib de 5L", 0, 40.5, null],
@@ -27,10 +35,13 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Martin Pouret",
-    orderInfo:
-      "Délais de livraison : prévoir 6 jours ouvrés minimum\nCommande Lundi avant 10h pour livraison le lundi suivant\nFRANCO 400HT (14 cartons)",
-    contactInfo:
-      "Code client: 002808\nMail: d-benoit@martin-pouret.com, admin@martin-pouret.com, asli.gurbuz@amone.fr (suivi premiers mois)",
+    orderSchedule:
+      "Lundi avant 10h pour livraison le lundi suivant (délai 6 jours ouvrés minimum)",
+    minimumOrder: "400€ HT (14 cartons)",
+    email: "d-benoit@martin-pouret.com, admin@martin-pouret.com, asli.gurbuz@amone.fr (suivi premiers mois)",
+    phone: null,
+    clientCode: "002808",
+    notes: null,
     items: [
       ["KE01025CRN1", 'Ketchup Français "Le Grand Classique"', "Carton 80 pots de 25g", 5, 0.37, 29.6],
       ["MAY01022CRN1", "Mayonnaise à la moutarde d'Orléans", "Carton 80 pots de 25g", 7, 0.37, 29.6],
@@ -39,10 +50,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Wellembal",
-    orderInfo:
-      "Commande À POUR D — Lundi avant 10h pour livraison vendredi\nPréciser nom d'établissement et date de livraison souhaitée\nFRANCO 5 CARTONS",
-    contactInfo:
-      "Mail: odoo@wellembal.com, anthony.mevel@wellembal.com, commande@wellembal.com, sandrine.ordioni@wellembal.com",
+    orderSchedule: "Lundi avant 10h pour livraison vendredi (préciser établissement + date souhaitée)",
+    minimumOrder: "5 cartons",
+    email: "odoo@wellembal.com, anthony.mevel@wellembal.com, commande@wellembal.com, sandrine.ordioni@wellembal.com",
+    phone: null,
+    clientCode: null,
+    notes: null,
     items: [
       ["AMONESSOS221234", "Sac SOS AMONE 22x12x34 cm", "Carton de 500", 3, 0.0795, 39.75],
       ["AMONEBCHIPS080610", "Boite frites AMONE 8x6x8 cm", "Carton de 800", 1, 0.09025, 72.2],
@@ -64,8 +77,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Cafés Richard",
-    orderInfo: "Modalités en attente",
-    contactInfo: "Code client: en attente\nMail de commande : —\nTél : —",
+    orderSchedule: "Modalités en attente",
+    minimumOrder: null,
+    email: null,
+    phone: null,
+    clientCode: "en attente",
+    notes: null,
     items: [
       ["420954", "MASSAYA", "Paquet 1kg", 0, 32.4, null],
       ["440260", "DK RICHARD MO1", "Paquet 250g", 0, 19.9, null],
@@ -101,8 +118,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Metro",
-    orderInfo: "Commande lundi avant 12h pour livraison mercredi\nCommande sur l'app\nFranco 400€ HT",
-    contactInfo: "Code client: 742539",
+    orderSchedule: "Lundi avant 12h pour livraison mercredi (commande sur l'app)",
+    minimumOrder: "400€ HT",
+    email: null,
+    phone: null,
+    clientCode: "742539",
+    notes: null,
     items: [
       ["222235", "ARO Sel fin sac 1kg", "Carton de 12", 0, 0.5, 5.94],
       ["242094", "Sel fin iodé BV 500g Cerebo", "Carton de 10", 0, 0.56, 5.64],
@@ -147,8 +168,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Chomette",
-    orderInfo: "Commande À pour D — Lundi avant 10h pour vendredi\nCommande sur le site internet",
-    contactInfo: "Code client: 1571048\nTél: 01 69 02 57 54",
+    orderSchedule: "Lundi avant 10h pour livraison vendredi (commande sur le site internet)",
+    minimumOrder: null,
+    email: null,
+    phone: "01 69 02 57 54",
+    clientCode: "1571048",
+    notes: null,
     items: [
       ["00 2355", "Pique fiche socle marbre H.16cm", "Unité", 1, 14.5, null],
       ["00 2842", "Verre à pied trempé 19cl Amelia", "Lot de 12", 2, 2.2, null],
@@ -278,8 +303,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Noveo",
-    orderInfo: null,
-    contactInfo: null,
+    orderSchedule: null,
+    minimumOrder: null,
+    email: null,
+    phone: null,
+    clientCode: null,
+    notes: null,
     items: [
       [
         "00 2025",
@@ -293,8 +322,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Amazon",
-    orderInfo: null,
-    contactInfo: null,
+    orderSchedule: null,
+    minimumOrder: null,
+    email: null,
+    phone: null,
+    clientCode: null,
+    notes: null,
     items: [
       [
         "https://www.amazon.fr/dp/B07YSTFKC7",
@@ -310,8 +343,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Vaisselle personnalisée (franchiseur)",
-    orderInfo: null,
-    contactInfo: null,
+    orderSchedule: null,
+    minimumOrder: null,
+    email: null,
+    phone: null,
+    clientCode: null,
+    notes: null,
     items: [
       ["548897", "Assiette ovale Anna 32cm décor floral (plateau 1 personne)", "Unité", 20, 18, null],
       ["548900", "Assiette ovale Anna 22cm décor floral (dessert)", "Unité", 12, 15.5, null],
@@ -323,8 +360,12 @@ const suppliers: SupplierData[] = [
   },
   {
     name: "Maison Andresy",
-    orderInfo: null,
-    contactInfo: "Code client: CLT005282",
+    orderSchedule: null,
+    minimumOrder: null,
+    email: null,
+    phone: null,
+    clientCode: "CLT005282",
+    notes: null,
     items: [
       ["AL13408", "Ketchup", null, 8, null, null],
       ["AL13407", "Mayonnaise", null, 9, null, null],
@@ -349,8 +390,12 @@ async function upsertSupplier(data: SupplierData) {
     await prisma.supplier.update({
       where: { id: existing.id },
       data: {
-        orderInfo: data.orderInfo,
-        contactInfo: data.contactInfo,
+        orderSchedule: data.orderSchedule,
+        minimumOrder: data.minimumOrder,
+        email: data.email,
+        phone: data.phone,
+        clientCode: data.clientCode,
+        notes: data.notes,
         items: { create: items },
       },
     });
@@ -358,8 +403,12 @@ async function upsertSupplier(data: SupplierData) {
     await prisma.supplier.create({
       data: {
         name: data.name,
-        orderInfo: data.orderInfo,
-        contactInfo: data.contactInfo,
+        orderSchedule: data.orderSchedule,
+        minimumOrder: data.minimumOrder,
+        email: data.email,
+        phone: data.phone,
+        clientCode: data.clientCode,
+        notes: data.notes,
         items: { create: items },
       },
     });
