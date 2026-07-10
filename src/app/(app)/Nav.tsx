@@ -26,7 +26,7 @@ export function Nav({ role, username }: { role: string; username: string }) {
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-6">
-          <span className="text-lg font-bold text-brand-700">🍽️ Resto</span>
+          <span className="text-lg font-bold text-brand-700">🍽️ Amoné Nice</span>
 
           <nav className="hidden gap-1 sm:flex">
             {visibleTabs.map((tab) => (
