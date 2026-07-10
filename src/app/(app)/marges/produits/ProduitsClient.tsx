@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/Modal";
 import {
+  Channel,
   IngredientUnit,
   RecipeQuantityUnit,
   allowedQuantityUnitsFor,
@@ -17,6 +18,7 @@ type Ingredient = { id: string; name: string; unit: string; price: number };
 type ProductIngredientRow = {
   quantity: number;
   quantityUnit: string;
+  channel: string;
   ingredient: Ingredient;
 };
 
@@ -34,10 +36,15 @@ type Product = {
   priceOnSite: number;
   priceTakeaway: number;
   ingredients: ProductIngredientRow[];
-  margins: { cost: number; onSite: MarginBlock; takeaway: MarginBlock };
+  margins: { onSite: MarginBlock; takeaway: MarginBlock };
 };
 
-type FormLine = { ingredientId: string; quantity: string; quantityUnit: RecipeQuantityUnit };
+type FormLine = {
+  ingredientId: string;
+  quantity: string;
+  quantityUnit: RecipeQuantityUnit;
+  channel: Channel;
+};
 
 const UNIT_LABELS: Record<string, string> = {
   kg: "kg",
@@ -47,12 +54,19 @@ const UNIT_LABELS: Record<string, string> = {
   piece: "pièce",
 };
 
+const CHANNEL_LABELS: Record<Channel, string> = {
+  BOTH: "Les deux",
+  SUR_PLACE: "Sur place uniquement",
+  EMPORTER: "À emporter uniquement",
+};
+
 function emptyLine(ingredients: Ingredient[]): FormLine {
   const first = ingredients[0];
   return {
     ingredientId: first?.id ?? "",
     quantity: "",
     quantityUnit: first ? allowedQuantityUnitsFor(first.unit as IngredientUnit)[0] : "piece",
+    channel: "BOTH",
   };
 }
 
@@ -107,6 +121,7 @@ export function ProduitsClient() {
         ingredientId: line.ingredient.id,
         quantity: String(line.quantity),
         quantityUnit: line.quantityUnit as RecipeQuantityUnit,
+        channel: (line.channel as Channel) ?? "BOTH",
       }))
     );
     setError(null);
@@ -137,13 +152,14 @@ export function ProduitsClient() {
         .filter((l) => l.ingredientId && parseFloat(l.quantity) > 0)
         .map((l) => {
           const ing = ingredients.find((i) => i.id === l.ingredientId)!;
-          return { quantity: parseFloat(l.quantity), quantityUnit: l.quantityUnit, ingredient: ing };
+          return { quantity: parseFloat(l.quantity), quantityUnit: l.quantityUnit, channel: l.channel, ingredient: ing };
         });
       if (validLines.length === 0) return null;
-      const cost = computeCostOfGoods(validLines);
-      const onSite = computeMargin(parseFloat(priceOnSite) || 0, TVA_SUR_PLACE, cost);
-      const takeaway = computeMargin(parseFloat(priceTakeaway) || 0, TVA_A_EMPORTER, cost);
-      return { cost, onSite, takeaway };
+      const costOnSite = computeCostOfGoods(validLines, "SUR_PLACE");
+      const costTakeaway = computeCostOfGoods(validLines, "EMPORTER");
+      const onSite = computeMargin(parseFloat(priceOnSite) || 0, TVA_SUR_PLACE, costOnSite);
+      const takeaway = computeMargin(parseFloat(priceTakeaway) || 0, TVA_A_EMPORTER, costTakeaway);
+      return { onSite, takeaway };
     } catch {
       return null;
     }
@@ -164,6 +180,7 @@ export function ProduitsClient() {
           ingredientId: l.ingredientId,
           quantity: parseFloat(l.quantity),
           quantityUnit: l.quantityUnit,
+          channel: l.channel,
         })),
     };
 
@@ -247,7 +264,8 @@ export function ProduitsClient() {
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
                   Produit{sortArrow("name")}
                 </th>
-                <th>Coût de revient</th>
+                <th>Coût sur place</th>
+                <th>Coût à emporter</th>
                 <th>Prix sur place (TTC)</th>
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("onSitePercent")}>
                   Marge sur place{sortArrow("onSitePercent")}
@@ -263,7 +281,8 @@ export function ProduitsClient() {
               {rows.map((p) => (
                 <tr key={p.id}>
                   <td className="font-medium">{p.name}</td>
-                  <td>{p.margins.cost.toFixed(2)} €</td>
+                  <td>{p.margins.onSite.cost.toFixed(2)} €</td>
+                  <td>{p.margins.takeaway.cost.toFixed(2)} €</td>
                   <td>{p.priceOnSite.toFixed(2)} €</td>
                   <td className={p.margins.onSite.marginPercent < 0 ? "text-red-600" : ""}>
                     {p.margins.onSite.marginEuros.toFixed(2)} € ({p.margins.onSite.marginPercent.toFixed(0)}%)
@@ -286,7 +305,7 @@ export function ProduitsClient() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-6 text-center text-gray-400">
+                  <td colSpan={8} className="py-6 text-center text-gray-400">
                     Aucun produit
                   </td>
                 </tr>
@@ -348,7 +367,7 @@ export function ProduitsClient() {
                     const ing = ingredients.find((i) => i.id === line.ingredientId);
                     const allowedUnits = ing ? allowedQuantityUnitsFor(ing.unit as IngredientUnit) : [];
                     return (
-                      <div key={index} className="flex items-center gap-2">
+                      <div key={index} className="flex flex-wrap items-center gap-2 rounded-md border border-gray-100 p-2">
                         <select
                           value={line.ingredientId}
                           onChange={(e) => setLineIngredient(index, e.target.value)}
@@ -381,6 +400,17 @@ export function ProduitsClient() {
                             </option>
                           ))}
                         </select>
+                        <select
+                          value={line.channel}
+                          onChange={(e) => updateLine(index, { channel: e.target.value as Channel })}
+                          className="w-44"
+                        >
+                          {(Object.entries(CHANNEL_LABELS) as [Channel, string][]).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
                         <button
                           type="button"
                           onClick={() => removeLine(index)}
@@ -397,13 +427,14 @@ export function ProduitsClient() {
 
               {livePreview && (
                 <div className="rounded-md bg-gray-50 p-3 text-sm text-gray-700">
-                  <p>Coût de revient estimé : <strong>{livePreview.cost.toFixed(2)} €</strong></p>
                   <p>
-                    Marge sur place : <strong>{livePreview.onSite.marginEuros.toFixed(2)} €</strong> (
+                    Coût de revient sur place : <strong>{livePreview.onSite.cost.toFixed(2)} €</strong> — marge{" "}
+                    <strong>{livePreview.onSite.marginEuros.toFixed(2)} €</strong> (
                     {livePreview.onSite.marginPercent.toFixed(0)}%)
                   </p>
                   <p>
-                    Marge à emporter : <strong>{livePreview.takeaway.marginEuros.toFixed(2)} €</strong> (
+                    Coût de revient à emporter : <strong>{livePreview.takeaway.cost.toFixed(2)} €</strong> — marge{" "}
+                    <strong>{livePreview.takeaway.marginEuros.toFixed(2)} €</strong> (
                     {livePreview.takeaway.marginPercent.toFixed(0)}%)
                   </p>
                 </div>

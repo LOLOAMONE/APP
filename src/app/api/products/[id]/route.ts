@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
-import { RECIPE_QUANTITY_UNITS } from "@/lib/margins";
+import { CHANNELS, RECIPE_QUANTITY_UNITS } from "@/lib/margins";
 
 const productSchema = z.object({
   name: z.string().min(1),
@@ -15,6 +15,7 @@ const productSchema = z.object({
         ingredientId: z.string().min(1),
         quantity: z.number().positive(),
         quantityUnit: z.enum(RECIPE_QUANTITY_UNITS),
+        channel: z.enum(CHANNELS).default("BOTH"),
       })
     )
     .min(1, "Ajoutez au moins un ingrédient"),
@@ -38,6 +39,7 @@ export const PUT = withErrorHandling(
               ingredientId: i.ingredientId,
               quantity: i.quantity,
               quantityUnit: i.quantityUnit,
+              channel: i.channel,
             })),
           },
         },

@@ -71,6 +71,7 @@ model ProductIngredient {
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
   quantity     Float      // quantité dans quantityUnit
   quantityUnit String     // "g" | "kg" | "mL" | "L" | "piece"
+  channel      String     @default("BOTH") // "BOTH" | "SUR_PLACE" | "EMPORTER" — permet un coût de revient différent selon le mode de vente (emballages différents)
 }
 
 model Shift {

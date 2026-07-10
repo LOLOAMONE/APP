@@ -44,21 +44,30 @@ export function convertToIngredientUnit(
   return quantity * TO_BASE_FACTOR[quantityUnit];
 }
 
+export const CHANNELS = ["BOTH", "SUR_PLACE", "EMPORTER"] as const;
+export type Channel = (typeof CHANNELS)[number];
+export type SalesChannel = "SUR_PLACE" | "EMPORTER";
+
 export type RecipeLine = {
   quantity: number;
   quantityUnit: string;
+  channel?: string;
   ingredient: { unit: string; price: number };
 };
 
-export function computeCostOfGoods(lines: RecipeLine[]): number {
-  return lines.reduce((total, line) => {
-    const qtyInBaseUnit = convertToIngredientUnit(
-      line.quantity,
-      line.quantityUnit as RecipeQuantityUnit,
-      line.ingredient.unit as IngredientUnit
-    );
-    return total + qtyInBaseUnit * line.ingredient.price;
-  }, 0);
+/** Coût de revient pour un mode de vente donné : les lignes "BOTH" comptent toujours, les lignes
+ * spécifiques à l'autre canal sont ignorées (ex: emballage à emporter n'entre pas dans le coût sur place). */
+export function computeCostOfGoods(lines: RecipeLine[], salesChannel: SalesChannel): number {
+  return lines
+    .filter((line) => !line.channel || line.channel === "BOTH" || line.channel === salesChannel)
+    .reduce((total, line) => {
+      const qtyInBaseUnit = convertToIngredientUnit(
+        line.quantity,
+        line.quantityUnit as RecipeQuantityUnit,
+        line.ingredient.unit as IngredientUnit
+      );
+      return total + qtyInBaseUnit * line.ingredient.price;
+    }, 0);
 }
 
 export type MarginResult = {

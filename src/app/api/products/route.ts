@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 import {
+  CHANNELS,
   RECIPE_QUANTITY_UNITS,
   TVA_A_EMPORTER,
   TVA_SUR_PLACE,
@@ -21,6 +22,7 @@ const productSchema = z.object({
         ingredientId: z.string().min(1),
         quantity: z.number().positive(),
         quantityUnit: z.enum(RECIPE_QUANTITY_UNITS),
+        channel: z.enum(CHANNELS).default("BOTH"),
       })
     )
     .min(1, "Ajoutez au moins un ingrédient"),
@@ -29,13 +31,18 @@ const productSchema = z.object({
 function withMargins(product: {
   priceOnSite: number;
   priceTakeaway: number;
-  ingredients: { quantity: number; quantityUnit: string; ingredient: { unit: string; price: number } }[];
+  ingredients: {
+    quantity: number;
+    quantityUnit: string;
+    channel: string;
+    ingredient: { unit: string; price: number };
+  }[];
 }) {
-  const cost = computeCostOfGoods(product.ingredients);
+  const costOnSite = computeCostOfGoods(product.ingredients, "SUR_PLACE");
+  const costTakeaway = computeCostOfGoods(product.ingredients, "EMPORTER");
   return {
-    cost,
-    onSite: computeMargin(product.priceOnSite, TVA_SUR_PLACE, cost),
-    takeaway: computeMargin(product.priceTakeaway, TVA_A_EMPORTER, cost),
+    onSite: computeMargin(product.priceOnSite, TVA_SUR_PLACE, costOnSite),
+    takeaway: computeMargin(product.priceTakeaway, TVA_A_EMPORTER, costTakeaway),
   };
 }
 
@@ -64,6 +71,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
           ingredientId: i.ingredientId,
           quantity: i.quantity,
           quantityUnit: i.quantityUnit,
+          channel: i.channel,
         })),
       },
     },
