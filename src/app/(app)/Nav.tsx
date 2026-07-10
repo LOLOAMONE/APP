@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AccountModal } from "./AccountModal";
 
 const TABS = [
   { href: "/marges", label: "Marges", adminOnly: true },
@@ -14,6 +15,7 @@ export function Nav({ role, username }: { role: string; username: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
 
   const visibleTabs = TABS.filter((tab) => !tab.adminOnly || role === "ADMIN");
 
@@ -48,6 +50,22 @@ export function Nav({ role, username }: { role: string; username: string }) {
 
         <div className="hidden items-center gap-3 sm:flex">
           <span className="text-sm text-gray-500">{username}</span>
+          <button
+            onClick={() => setShowAccount(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50"
+            aria-label="Mon profil"
+            title="Mon profil"
+          >
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M8.325 2.5c.19-.844.933-1.444 1.797-1.444h.756c.864 0 1.607.6 1.797 1.444l.11.492a1.833 1.833 0 0 0 2.61 1.264l.447-.223a1.833 1.833 0 0 1 2.31.53l.378.616a1.833 1.833 0 0 1-.363 2.383l-.394.34a1.833 1.833 0 0 0 0 2.796l.394.34a1.833 1.833 0 0 1 .363 2.383l-.378.616a1.833 1.833 0 0 1-2.31.53l-.447-.223a1.833 1.833 0 0 0-2.61 1.264l-.11.492c-.19.844-.933 1.444-1.797 1.444h-.756c-.864 0-1.607-.6-1.797-1.444l-.11-.492a1.833 1.833 0 0 0-2.61-1.264l-.447.223a1.833 1.833 0 0 1-2.31-.53l-.378-.616a1.833 1.833 0 0 1 .363-2.383l.394-.34a1.833 1.833 0 0 0 0-2.796l-.394-.34a1.833 1.833 0 0 1-.363-2.383l.378-.616a1.833 1.833 0 0 1 2.31-.53l.447.223a1.833 1.833 0 0 0 2.61-1.264l.11-.492Z"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinejoin="round"
+              />
+              <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.3" />
+            </svg>
+          </button>
           <button
             onClick={handleLogout}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -87,15 +105,28 @@ export function Nav({ role, username }: { role: string; username: string }) {
           </nav>
           <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
             <span className="text-sm text-gray-500">{username}</span>
-            <button
-              onClick={handleLogout}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700"
-            >
-              Déconnexion
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  setShowAccount(true);
+                }}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700"
+              >
+                Mon profil
+              </button>
+              <button
+                onClick={handleLogout}
+                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700"
+              >
+                Déconnexion
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {showAccount && <AccountModal username={username} onClose={() => setShowAccount(false)} />}
     </header>
   );
 }
