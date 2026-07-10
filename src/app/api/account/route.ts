@@ -40,6 +40,8 @@ export const PUT = withErrorHandling(async (req: NextRequest) => {
     username: updated.username,
     role: updated.role as "ADMIN" | "EMPLOYEE",
     employeeId: user.employee?.id ?? null,
+    canAccessMarges: updated.canAccessMarges,
+    canAccessMercuriale: updated.canAccessMercuriale,
   });
 
   const res = NextResponse.json({ username: updated.username });

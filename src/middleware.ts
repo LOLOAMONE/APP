@@ -5,6 +5,10 @@ export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|login).*)"],
 };
 
+const MARGES_PATHS = ["/marges", "/api/ingredients", "/api/products", "/api/menus"];
+const MERCURIALE_PATHS = ["/mercuriale", "/api/suppliers", "/api/supplier-items"];
+const USERS_PATHS = ["/api/users"];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -24,20 +28,22 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const isAdminOnlyRoute =
-    pathname.startsWith("/marges") ||
-    pathname.startsWith("/mercuriale") ||
-    pathname.startsWith("/api/ingredients") ||
-    pathname.startsWith("/api/products") ||
-    pathname.startsWith("/api/menus") ||
-    pathname.startsWith("/api/suppliers") ||
-    pathname.startsWith("/api/supplier-items");
+  const isAdmin = session.role === "ADMIN";
+  const deny = () =>
+    isApi
+      ? NextResponse.json({ error: "Accès interdit" }, { status: 403 })
+      : NextResponse.redirect(new URL("/planning", req.url));
 
-  if (isAdminOnlyRoute && session.role !== "ADMIN") {
-    if (isApi) {
-      return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
-    }
-    return NextResponse.redirect(new URL("/planning", req.url));
+  if (USERS_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin) {
+    return deny();
+  }
+
+  if (MARGES_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin && !session.canAccessMarges) {
+    return deny();
+  }
+
+  if (MERCURIALE_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin && !session.canAccessMercuriale) {
+    return deny();
   }
 
   return NextResponse.next();

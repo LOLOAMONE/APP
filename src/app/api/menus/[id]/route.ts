@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
 const menuSchema = z.object({
@@ -24,7 +24,7 @@ const menuInclude = {
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    await requireMargesAccess();
     const data = menuSchema.parse(await req.json());
 
     const menu = await prisma.$transaction(async (tx) => {
@@ -47,7 +47,7 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    await requireMargesAccess();
     await prisma.menu.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

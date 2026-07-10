@@ -5,6 +5,8 @@ export type SessionPayload = {
   username: string;
   role: "ADMIN" | "EMPLOYEE";
   employeeId: string | null;
+  canAccessMarges: boolean;
+  canAccessMercuriale: boolean;
 };
 
 const COOKIE_NAME = "session";

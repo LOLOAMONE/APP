@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 import { INGREDIENT_UNITS } from "@/lib/margins";
 
@@ -13,7 +13,7 @@ const ingredientSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  await requireAdmin();
+  await requireMargesAccess();
   const ingredients = await prisma.ingredient.findMany({
     orderBy: { name: "asc" },
   });
@@ -21,7 +21,7 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireAdmin();
+  await requireMargesAccess();
   const data = ingredientSchema.parse(await req.json());
 
   const ingredient = await prisma.ingredient.create({

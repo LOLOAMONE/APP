@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 import { TVA_A_EMPORTER, TVA_SUR_PLACE, computeMargin, computeMenuCost } from "@/lib/margins";
 
@@ -40,7 +40,7 @@ const menuInclude = {
 } as const;
 
 export const GET = withErrorHandling(async () => {
-  await requireAdmin();
+  await requireMargesAccess();
   const menus = await prisma.menu.findMany({
     orderBy: { name: "asc" },
     include: menuInclude,
@@ -49,7 +49,7 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireAdmin();
+  await requireMargesAccess();
   const data = menuSchema.parse(await req.json());
 
   const menu = await prisma.menu.create({

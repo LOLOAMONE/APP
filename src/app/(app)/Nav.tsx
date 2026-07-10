@@ -3,21 +3,29 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AccountModal } from "./AccountModal";
+import { SettingsModal } from "./SettingsModal";
 
-const TABS = [
-  { href: "/marges", label: "Marges", adminOnly: true },
-  { href: "/mercuriale", label: "Mercuriale", adminOnly: true },
-  { href: "/planning", label: "Planning", adminOnly: false },
-];
+type NavProps = {
+  userId: string;
+  role: string;
+  username: string;
+  canAccessMarges: boolean;
+  canAccessMercuriale: boolean;
+};
 
-export function Nav({ role, username }: { role: string; username: string }) {
+export function Nav({ userId, role, username, canAccessMarges, canAccessMercuriale }: NavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [showAccount, setShowAccount] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const visibleTabs = TABS.filter((tab) => !tab.adminOnly || role === "ADMIN");
+  const isAdmin = role === "ADMIN";
+  const TABS = [
+    { href: "/marges", label: "Marges", visible: isAdmin || canAccessMarges },
+    { href: "/mercuriale", label: "Mercuriale", visible: isAdmin || canAccessMercuriale },
+    { href: "/planning", label: "Planning", visible: true },
+  ];
+  const visibleTabs = TABS.filter((tab) => tab.visible);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -51,10 +59,10 @@ export function Nav({ role, username }: { role: string; username: string }) {
         <div className="hidden items-center gap-3 sm:flex">
           <span className="text-sm text-gray-500">{username}</span>
           <button
-            onClick={() => setShowAccount(true)}
+            onClick={() => setShowSettings(true)}
             className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 text-gray-500 hover:bg-gray-50"
-            aria-label="Mon profil"
-            title="Mon profil"
+            aria-label="Réglages"
+            title="Réglages"
           >
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
               <path
@@ -109,11 +117,11 @@ export function Nav({ role, username }: { role: string; username: string }) {
               <button
                 onClick={() => {
                   setOpen(false);
-                  setShowAccount(true);
+                  setShowSettings(true);
                 }}
                 className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700"
               >
-                Mon profil
+                Réglages
               </button>
               <button
                 onClick={handleLogout}
@@ -126,7 +134,14 @@ export function Nav({ role, username }: { role: string; username: string }) {
         </div>
       )}
 
-      {showAccount && <AccountModal username={username} onClose={() => setShowAccount(false)} />}
+      {showSettings && (
+        <SettingsModal
+          userId={userId}
+          username={username}
+          isAdmin={isAdmin}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </header>
   );
 }

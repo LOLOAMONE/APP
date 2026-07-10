@@ -30,6 +30,8 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     username: user.username,
     role: user.role as "ADMIN" | "EMPLOYEE",
     employeeId: user.employee?.id ?? null,
+    canAccessMarges: user.canAccessMarges,
+    canAccessMercuriale: user.canAccessMercuriale,
   });
 
   const res = NextResponse.json({

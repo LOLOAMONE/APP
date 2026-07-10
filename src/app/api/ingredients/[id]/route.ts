@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 import { INGREDIENT_UNITS } from "@/lib/margins";
 
@@ -15,7 +15,7 @@ const ingredientSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    await requireMargesAccess();
     const data = ingredientSchema.parse(await req.json());
 
     const existing = await prisma.ingredient.findUnique({ where: { id: params.id } });
@@ -39,7 +39,7 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    await requireMargesAccess();
     try {
       await prisma.ingredient.delete({ where: { id: params.id } });
     } catch (err) {

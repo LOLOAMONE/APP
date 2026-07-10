@@ -32,3 +32,21 @@ export async function requireAdmin(): Promise<SessionPayload> {
   }
   return user;
 }
+
+/** Accès à l'onglet Marges : la direction, ou un employé à qui cet accès a été accordé. */
+export async function requireMargesAccess(): Promise<SessionPayload> {
+  const user = await requireUser();
+  if (user.role !== "ADMIN" && !user.canAccessMarges) {
+    throw new Error("FORBIDDEN");
+  }
+  return user;
+}
+
+/** Accès à l'onglet Mercuriale : la direction, ou un employé à qui cet accès a été accordé. */
+export async function requireMercurialeAccess(): Promise<SessionPayload> {
+  const user = await requireUser();
+  if (user.role !== "ADMIN" && !user.canAccessMercuriale) {
+    throw new Error("FORBIDDEN");
+  }
+  return user;
+}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 import { CHANNELS, RECIPE_QUANTITY_UNITS } from "@/lib/margins";
 
@@ -24,7 +24,7 @@ const productSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    await requireMargesAccess();
     const data = productSchema.parse(await req.json());
 
     const product = await prisma.$transaction(async (tx) => {
@@ -55,7 +55,7 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    await requireMargesAccess();
     await prisma.product.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

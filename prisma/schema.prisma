@@ -12,12 +12,14 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String
-  role         String   // "ADMIN" | "EMPLOYEE"
-  employee     Employee?
-  createdAt    DateTime @default(now())
+  id                  String    @id @default(cuid())
+  username            String    @unique
+  passwordHash        String
+  role                String    // "ADMIN" | "EMPLOYEE" — ADMIN a toujours accès à tout
+  canAccessMarges     Boolean   @default(false) // ignoré si role = ADMIN
+  canAccessMercuriale Boolean   @default(false) // ignoré si role = ADMIN
+  employee            Employee?
+  createdAt           DateTime  @default(now())
 }
 
 model Employee {

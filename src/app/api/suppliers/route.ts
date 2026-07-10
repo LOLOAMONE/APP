@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { requireMercurialeAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
 const supplierSchema = z.object({
@@ -15,7 +15,7 @@ const supplierSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  await requireAdmin();
+  await requireMercurialeAccess();
   const suppliers = await prisma.supplier.findMany({
     orderBy: { name: "asc" },
     include: { items: { orderBy: { designation: "asc" } } },
@@ -24,7 +24,7 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireAdmin();
+  await requireMercurialeAccess();
   const data = supplierSchema.parse(await req.json());
   const supplier = await prisma.supplier.create({ data, include: { items: true } });
   return NextResponse.json(supplier, { status: 201 });
