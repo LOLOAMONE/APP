@@ -60,8 +60,28 @@ model Product {
   priceOnSite     Float               // prix de vente TTC sur place
   priceTakeaway   Float               // prix de vente TTC à emporter
   ingredients     ProductIngredient[]
+  menuLinks       MenuItem[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
+}
+
+model Menu {
+  id            String     @id @default(cuid())
+  name          String
+  priceOnSite   Float      // prix de vente TTC sur place
+  priceTakeaway Float      // prix de vente TTC à emporter
+  items         MenuItem[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model MenuItem {
+  id        String  @id @default(cuid())
+  menuId    String
+  menu      Menu    @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity  Int     @default(1)
 }
 
 model ProductIngredient {

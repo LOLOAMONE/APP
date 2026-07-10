@@ -70,6 +70,19 @@ export function computeCostOfGoods(lines: RecipeLine[], salesChannel: SalesChann
     }, 0);
 }
 
+export type MenuItemLine = {
+  quantity: number;
+  product: { ingredients: RecipeLine[] };
+};
+
+/** Coût de revient d'un menu = somme des coûts de revient des produits qui le composent (par canal), multipliés par leur quantité. */
+export function computeMenuCost(items: MenuItemLine[], salesChannel: SalesChannel): number {
+  return items.reduce(
+    (total, item) => total + item.quantity * computeCostOfGoods(item.product.ingredients, salesChannel),
+    0
+  );
+}
+
 export type MarginResult = {
   priceTTC: number;
   priceHT: number;

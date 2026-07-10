@@ -27,7 +27,8 @@ export async function middleware(req: NextRequest) {
   const isMargesRoute =
     pathname.startsWith("/marges") ||
     pathname.startsWith("/api/ingredients") ||
-    pathname.startsWith("/api/products");
+    pathname.startsWith("/api/products") ||
+    pathname.startsWith("/api/menus");
 
   if (isMargesRoute && session.role !== "ADMIN") {
     if (isApi) {

@@ -45,6 +45,27 @@ const ingredientsData: { name: string; unit: IngredientUnit; price: number }[] =
   { name: "Serviette", unit: "piece", price: 0.0298 },
   { name: "Bouteille à jus 25cl", unit: "piece", price: 0.2368 },
   { name: "Bouteille à jus 33cl", unit: "piece", price: 0.2522 },
+  // Prix d'achat inconnu (absent des fichiers Excel) : placeholder à 0€, à corriger dans l'onglet Ingrédients.
+  { name: "Café", unit: "piece", price: 0 },
+  { name: "Double Café", unit: "piece", price: 0 },
+  { name: "Café long", unit: "piece", price: 0 },
+  { name: "Café au lait", unit: "piece", price: 0 },
+  { name: "Café au lait Tartine", unit: "piece", price: 0 },
+  { name: "Café au lait Brioche", unit: "piece", price: 0 },
+  { name: "Lait Mousse", unit: "piece", price: 0 },
+  { name: "Lait Ribot Chaud", unit: "piece", price: 0 },
+  { name: "Cacao", unit: "piece", price: 0 },
+  { name: "Thé", unit: "piece", price: 0 },
+  { name: "Extra lait végétal", unit: "piece", price: 0 },
+  { name: "Jus de pomme", unit: "piece", price: 0 },
+  { name: "Bière blonde 33cl", unit: "piece", price: 0 },
+  { name: "Bière blanche 33cl", unit: "piece", price: 0 },
+  { name: "Cidre brut 33cl", unit: "piece", price: 0 },
+  { name: "Vin rouge 14cl", unit: "piece", price: 0 },
+  { name: "Vin blanc 14cl", unit: "piece", price: 0 },
+  { name: "Vin rosé 14cl", unit: "piece", price: 0 },
+  { name: "Vin rouge 75cl", unit: "piece", price: 0 },
+  { name: "Vin blanc 75cl", unit: "piece", price: 0 },
 ];
 
 function cordonBleuLine(matiere: string, sticker: string) {
@@ -63,6 +84,11 @@ function boissonSoftLine(matiere: string, sticker: string) {
     { ingredient: "Bouteille à jus 33cl", quantity: 1, quantityUnit: "piece", channel: "EMPORTER" as Channel },
     { ingredient: sticker, quantity: 1, quantityUnit: "piece", channel: "EMPORTER" as Channel },
   ];
+}
+
+/** Produit simple à un seul ingrédient, sans emballage distinct (utilisé pour les boissons chaudes/alcools au coût matière encore inconnu). */
+function singleLine(matiere: string) {
+  return [{ ingredient: matiere, quantity: 1, quantityUnit: "piece", channel: "BOTH" as Channel }];
 }
 
 const productsData: {
@@ -121,6 +147,30 @@ const productsData: {
   { name: "Limonade 33cl", category: "Boissons", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Citronnade / Limonade", "Sticker boisson Limonade") },
   { name: "Oranginade 33cl", category: "Boissons", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Oranginade", "Sticker boisson Oranginade") },
   { name: "Thé vert pêche 33cl", category: "Boissons", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: boissonSoftLine("Thé pêche", "Sticker boisson Thé pêche") },
+  { name: "Jus de pomme (25cl)", category: "Boissons", priceOnSite: 5, priceTakeaway: 5, ingredients: singleLine("Jus de pomme") },
+
+  // Boissons chaudes : prix de vente connus (Prix menu Nice.xlsx), coût matière à définir (0€ en attendant).
+  { name: "Café", category: "Boissons chaudes", priceOnSite: 2, priceTakeaway: 1.8, ingredients: singleLine("Café") },
+  { name: "Double Café", category: "Boissons chaudes", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: singleLine("Double Café") },
+  { name: "Café long", category: "Boissons chaudes", priceOnSite: 2.2, priceTakeaway: 1.8, ingredients: singleLine("Café long") },
+  { name: "Café au lait", category: "Boissons chaudes", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: singleLine("Café au lait") },
+  { name: "Café au lait Tartine", category: "Boissons chaudes", priceOnSite: 4, priceTakeaway: 4, ingredients: singleLine("Café au lait Tartine") },
+  { name: "Café au lait Brioche", category: "Boissons chaudes", priceOnSite: 4, priceTakeaway: 4, ingredients: singleLine("Café au lait Brioche") },
+  { name: "Lait Mousse", category: "Boissons chaudes", priceOnSite: 4, priceTakeaway: 4, ingredients: singleLine("Lait Mousse") },
+  { name: "Lait Ribot Chaud", category: "Boissons chaudes", priceOnSite: 4, priceTakeaway: 4, ingredients: singleLine("Lait Ribot Chaud") },
+  { name: "Cacao", category: "Boissons chaudes", priceOnSite: 4, priceTakeaway: 4, ingredients: singleLine("Cacao") },
+  { name: "Thé", category: "Boissons chaudes", priceOnSite: 3.5, priceTakeaway: 3.5, ingredients: singleLine("Thé") },
+  { name: "Extra lait végétal", category: "Boissons chaudes", priceOnSite: 0.5, priceTakeaway: 0.5, ingredients: singleLine("Extra lait végétal") },
+
+  // Alcool : prix de vente connus, coût matière à définir (0€ en attendant).
+  { name: "Bière blonde 33cl", category: "Alcool", priceOnSite: 5.5, priceTakeaway: 5.5, ingredients: singleLine("Bière blonde 33cl") },
+  { name: "Bière blanche 33cl", category: "Alcool", priceOnSite: 5.5, priceTakeaway: 5.5, ingredients: singleLine("Bière blanche 33cl") },
+  { name: "Cidre brut 33cl", category: "Alcool", priceOnSite: 5.5, priceTakeaway: 5.5, ingredients: singleLine("Cidre brut 33cl") },
+  { name: "Vin rouge 14cl", category: "Alcool", priceOnSite: 4.5, priceTakeaway: 4.5, ingredients: singleLine("Vin rouge 14cl") },
+  { name: "Vin blanc 14cl", category: "Alcool", priceOnSite: 4.5, priceTakeaway: 4.5, ingredients: singleLine("Vin blanc 14cl") },
+  { name: "Vin rosé 14cl", category: "Alcool", priceOnSite: 4.5, priceTakeaway: 4.5, ingredients: singleLine("Vin rosé 14cl") },
+  { name: "Vin rouge 75cl", category: "Alcool", priceOnSite: 22, priceTakeaway: 22, ingredients: singleLine("Vin rouge 75cl") },
+  { name: "Vin blanc 75cl", category: "Alcool", priceOnSite: 22, priceTakeaway: 22, ingredients: singleLine("Vin blanc 75cl") },
 ];
 
 async function upsertIngredient(data: { name: string; unit: IngredientUnit; price: number }) {

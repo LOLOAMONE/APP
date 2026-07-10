@@ -40,7 +40,17 @@ type Product = {
   margins: { onSite: MarginBlock; takeaway: MarginBlock };
 };
 
-const KNOWN_CATEGORIES = ["Cordon Bleu", "Extras", "Sauces", "Dessert", "Boissons", "Autre"];
+const KNOWN_CATEGORIES = [
+  "Cordon Bleu",
+  "Extras",
+  "Sauces",
+  "Dessert",
+  "Boissons",
+  "Boissons chaudes",
+  "Alcool",
+  "Menu",
+  "Autre",
+];
 
 type FormLine = {
   ingredientId: string;
