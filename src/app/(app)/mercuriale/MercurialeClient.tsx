@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Modal } from "@/components/Modal";
 
 type SupplierItem = {
@@ -19,6 +20,7 @@ type SupplierItem = {
 type Supplier = {
   id: string;
   name: string;
+  category: string | null;
   orderSchedule: string | null;
   minimumOrder: string | null;
   email: string | null;
@@ -32,6 +34,7 @@ type PackagingUnitRow = { id: string; label: string };
 
 const emptySupplierForm = {
   name: "",
+  category: "",
   orderSchedule: "",
   minimumOrder: "",
   email: "",
@@ -39,6 +42,12 @@ const emptySupplierForm = {
   clientCode: "",
   notes: "",
 };
+
+const SUPPLIER_CATEGORY_FALLBACK = "Sans catégorie";
+
+function pendingCount(s: Supplier): number {
+  return s.items.filter((i) => i.orderedAt && !i.receivedAt).length;
+}
 
 function isUrl(value: string | null): value is string {
   return !!value && /^https?:\/\//i.test(value);
@@ -169,6 +178,35 @@ export function MercurialeClient() {
     [selected]
   );
 
+  const groupedSuppliers = useMemo(() => {
+    const map = new Map<string, Supplier[]>();
+    for (const s of suppliers) {
+      const cat = s.category || SUPPLIER_CATEGORY_FALLBACK;
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(s);
+    }
+    const categories = Array.from(map.keys());
+    const hasRealCategory = categories.some((c) => c !== SUPPLIER_CATEGORY_FALLBACK);
+    if (!hasRealCategory) {
+      return [{ category: null as string | null, suppliers }];
+    }
+    const ordered = [
+      ...categories.filter((c) => c !== SUPPLIER_CATEGORY_FALLBACK),
+      ...(map.has(SUPPLIER_CATEGORY_FALLBACK) ? [SUPPLIER_CATEGORY_FALLBACK] : []),
+    ];
+    return ordered.map((cat) => ({ category: cat as string | null, suppliers: map.get(cat)! }));
+  }, [suppliers]);
+
+  const supplierCategorySuggestions = useMemo(
+    () => Array.from(new Set(suppliers.map((s) => s.category).filter((c): c is string => !!c))),
+    [suppliers]
+  );
+
+  const toOrderCount = useMemo(
+    () => suppliers.reduce((sum, s) => sum + s.items.filter((i) => i.orderQuantity > 0 && !i.orderedAt).length, 0),
+    [suppliers]
+  );
+
   const dragEnabled = sortKey === "custom" && search === "";
 
   function toggleSort(key: Exclude<ItemSortKey, "custom">) {
@@ -193,6 +231,7 @@ export function MercurialeClient() {
     setEditingSupplier(s);
     setSupplierForm({
       name: s.name,
+      category: s.category ?? "",
       orderSchedule: s.orderSchedule ?? "",
       minimumOrder: s.minimumOrder ?? "",
       email: s.email ?? "",
@@ -210,6 +249,7 @@ export function MercurialeClient() {
     setError(null);
     const payload = {
       name: supplierForm.name,
+      category: supplierForm.category || null,
       orderSchedule: supplierForm.orderSchedule || null,
       minimumOrder: supplierForm.minimumOrder || null,
       email: supplierForm.email || null,
@@ -245,13 +285,31 @@ export function MercurialeClient() {
     if (res.ok) await loadAll();
   }
 
-  async function handleSupplierDrop(targetId: string) {
+  async function handleSupplierDrop(category: string | null, targetId: string) {
     if (!draggingId || draggingId === targetId) {
       setDraggingId(null);
       return;
     }
-    const reordered = moveById(suppliers, draggingId, targetId);
-    setSuppliers(reordered);
+    const group = groupedSuppliers.find((g) => g.category === category);
+    if (!group) {
+      setDraggingId(null);
+      return;
+    }
+    const reordered = moveById(group.suppliers, draggingId, targetId);
+    if (reordered === group.suppliers) {
+      setDraggingId(null);
+      return;
+    }
+    const matches = (s: Supplier) => category === null || (s.category || SUPPLIER_CATEGORY_FALLBACK) === category;
+    const indices: number[] = [];
+    suppliers.forEach((s, idx) => {
+      if (matches(s)) indices.push(idx);
+    });
+    const newSuppliers = [...suppliers];
+    indices.forEach((idx, i) => {
+      newSuppliers[idx] = reordered[i];
+    });
+    setSuppliers(newSuppliers);
     setDraggingId(null);
     await fetch("/api/suppliers/reorder", {
       method: "PUT",
@@ -441,6 +499,17 @@ export function MercurialeClient() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Mercuriale</h1>
         <div className="flex gap-2">
+          <Link
+            href="/mercuriale/a-commander"
+            className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            📋 À commander
+            {toOrderCount > 0 && (
+              <span className="ml-1.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700">
+                {toOrderCount}
+              </span>
+            )}
+          </Link>
           <button
             onClick={() => setShowUnitsModal(true)}
             className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -456,23 +525,41 @@ export function MercurialeClient() {
         </div>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
-        {suppliers.map((s) => (
-          <button
-            key={s.id}
-            draggable
-            onDragStart={() => setDraggingId(s.id)}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => handleSupplierDrop(s.id)}
-            onDragEnd={() => setDraggingId(null)}
-            onClick={() => setSelectedId(s.id)}
-            title="Glisser pour réordonner"
-            className={`cursor-grab select-none rounded-md px-3 py-1.5 text-sm font-medium active:cursor-grabbing ${
-              selectedId === s.id ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
-            } ${draggingId === s.id ? "opacity-40" : ""}`}
-          >
-            {s.name}
-          </button>
+      <div className="mb-6 space-y-2 border-b border-gray-200 pb-4">
+        {groupedSuppliers.map(({ category, suppliers: group }) => (
+          <div key={category ?? "__flat__"} className="flex flex-wrap items-center gap-2">
+            {category !== null && (
+              <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{category}</span>
+            )}
+            {group.map((s) => {
+              const pending = pendingCount(s);
+              return (
+                <button
+                  key={s.id}
+                  draggable
+                  onDragStart={() => setDraggingId(s.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => handleSupplierDrop(category, s.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                  onClick={() => setSelectedId(s.id)}
+                  title="Glisser pour réordonner"
+                  className={`cursor-grab select-none rounded-md px-3 py-1.5 text-sm font-medium active:cursor-grabbing ${
+                    selectedId === s.id ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
+                  } ${draggingId === s.id ? "opacity-40" : ""}`}
+                >
+                  {s.name}
+                  {pending > 0 && (
+                    <span
+                      title={`${pending} article(s) commandé(s) en attente de réception`}
+                      className="ml-1.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700"
+                    >
+                      📦{pending}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         ))}
         {suppliers.length === 0 && (
           <p className="text-sm text-gray-400">Aucun fournisseur. Ajoutez-en un pour commencer.</p>
@@ -693,14 +780,31 @@ export function MercurialeClient() {
           onClose={() => setShowSupplierForm(false)}
         >
           <form onSubmit={handleSupplierSubmit} className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Nom du fournisseur</label>
-              <input
-                value={supplierForm.name}
-                onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
-                className="w-full"
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Nom du fournisseur</label>
+                <input
+                  value={supplierForm.name}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, name: e.target.value })}
+                  className="w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Catégorie (optionnel)</label>
+                <input
+                  list="supplier-category-suggestions"
+                  placeholder="ex : Boissons"
+                  value={supplierForm.category}
+                  onChange={(e) => setSupplierForm({ ...supplierForm, category: e.target.value })}
+                  className="w-full"
+                />
+                <datalist id="supplier-category-suggestions">
+                  {supplierCategorySuggestions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">

@@ -121,6 +121,7 @@ model ProductIngredient {
 model Supplier {
   id            String         @id @default(cuid())
   name          String
+  category      String?        // catégorie libre regroupant les onglets fournisseurs (ex: "Boissons", "Mobilier")
   order         Int            @default(0) // ordre d'affichage des sous-onglets, modifiable par glisser-déposer
   orderSchedule String?        // jour/délai de commande et de livraison
   minimumOrder  String?        // franco / minimum de commande
