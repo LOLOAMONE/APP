@@ -7,6 +7,7 @@ type SupplierItem = {
   id: string;
   reference: string | null;
   designation: string;
+  category: string | null;
   packaging: string | null;
   orderQuantity: number;
   unitPriceHT: number | null;
@@ -56,6 +57,7 @@ function moveById<T extends { id: string }>(list: T[], fromId: string, toId: str
 const emptyItemForm = {
   reference: "",
   designation: "",
+  category: "",
   packaging: "",
   orderQuantity: "0",
   unitPriceHT: "",
@@ -76,6 +78,8 @@ type ItemSortKey =
 function toDateInputValue(iso: string | null): string {
   return iso ? iso.slice(0, 10) : "";
 }
+
+const CATEGORY_FALLBACK = "Sans catégorie";
 
 export function MercurialeClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -140,6 +144,30 @@ export function MercurialeClient() {
     });
     return sorted;
   }, [selected, search, sortKey, sortDir]);
+
+  const groupedItems = useMemo(() => {
+    const map = new Map<string, SupplierItem[]>();
+    for (const item of displayedItems) {
+      const cat = item.category || CATEGORY_FALLBACK;
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(item);
+    }
+    const categories = Array.from(map.keys());
+    const hasRealCategory = categories.some((c) => c !== CATEGORY_FALLBACK);
+    if (!hasRealCategory) {
+      return [{ category: null as string | null, items: displayedItems }];
+    }
+    const ordered = [
+      ...categories.filter((c) => c !== CATEGORY_FALLBACK),
+      ...(map.has(CATEGORY_FALLBACK) ? [CATEGORY_FALLBACK] : []),
+    ];
+    return ordered.map((cat) => ({ category: cat as string | null, items: map.get(cat)! }));
+  }, [displayedItems]);
+
+  const categorySuggestions = useMemo(
+    () => Array.from(new Set((selected?.items ?? []).map((i) => i.category).filter((c): c is string => !!c))),
+    [selected]
+  );
 
   const dragEnabled = sortKey === "custom" && search === "";
 
@@ -232,18 +260,36 @@ export function MercurialeClient() {
     });
   }
 
-  async function handleItemDrop(targetId: string) {
+  async function handleItemDrop(category: string | null, targetId: string) {
     if (!draggingId || draggingId === targetId || !selected) {
       setDraggingId(null);
       return;
     }
-    const reorderedItems = moveById(selected.items, draggingId, targetId);
-    setSuppliers((prev) => prev.map((s) => (s.id === selected.id ? { ...s, items: reorderedItems } : s)));
+    const group = groupedItems.find((g) => g.category === category);
+    if (!group) {
+      setDraggingId(null);
+      return;
+    }
+    const reordered = moveById(group.items, draggingId, targetId);
+    if (reordered === group.items) {
+      setDraggingId(null);
+      return;
+    }
+    const matches = (item: SupplierItem) => category === null || (item.category || CATEGORY_FALLBACK) === category;
+    const indices: number[] = [];
+    selected.items.forEach((it, idx) => {
+      if (matches(it)) indices.push(idx);
+    });
+    const newItems = [...selected.items];
+    indices.forEach((idx, i) => {
+      newItems[idx] = reordered[i];
+    });
+    setSuppliers((prev) => prev.map((s) => (s.id === selected.id ? { ...s, items: newItems } : s)));
     setDraggingId(null);
     await fetch(`/api/suppliers/${selected.id}/items/reorder`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ids: reorderedItems.map((i) => i.id) }),
+      body: JSON.stringify({ ids: reordered.map((i) => i.id) }),
     });
   }
 
@@ -259,6 +305,7 @@ export function MercurialeClient() {
     setItemForm({
       reference: i.reference ?? "",
       designation: i.designation,
+      category: i.category ?? "",
       packaging: i.packaging ?? "",
       orderQuantity: String(i.orderQuantity),
       unitPriceHT: i.unitPriceHT != null ? String(i.unitPriceHT) : "",
@@ -276,6 +323,7 @@ export function MercurialeClient() {
     const payload = {
       reference: itemForm.reference || null,
       designation: itemForm.designation,
+      category: itemForm.category || null,
       packaging: itemForm.packaging || null,
       orderQuantity: parseFloat(itemForm.orderQuantity) || 0,
       unitPriceHT: itemForm.unitPriceHT ? parseFloat(itemForm.unitPriceHT) : null,
@@ -521,115 +569,120 @@ export function MercurialeClient() {
             </p>
           )}
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-            <table>
-              <thead>
-                <tr>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("reference")}>
-                    Référence{sortArrow("reference")}
-                  </th>
-                  <th>Lien</th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("designation")}>
-                    Désignation{sortArrow("designation")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("packaging")}>
-                    Conditionnement{sortArrow("packaging")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("orderQuantity")}>
-                    Commande{sortArrow("orderQuantity")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("unitPriceHT")}>
-                    Prix U. HT{sortArrow("unitPriceHT")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("casePriceHT")}>
-                    Prix carton/colis HT{sortArrow("casePriceHT")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("orderedAt")}>
-                    📦 Commandé le{sortArrow("orderedAt")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("receivedAt")}>
-                    ✅ Reçu le{sortArrow("receivedAt")}
-                  </th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayedItems.map((i) => (
-                  <tr
-                    key={i.id}
-                    draggable={dragEnabled}
-                    onDragStart={() => dragEnabled && setDraggingId(i.id)}
-                    onDragOver={(e) => dragEnabled && e.preventDefault()}
-                    onDrop={() => dragEnabled && handleItemDrop(i.id)}
-                    onDragEnd={() => setDraggingId(null)}
-                    className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
-                      draggingId === i.id ? "opacity-40" : ""
-                    }`}
-                  >
-                    <td className="text-gray-500">{isUrl(i.reference) ? "—" : i.reference || "—"}</td>
-                    <td>
-                      {isUrl(i.reference) && (
-                        <a
-                          href={i.reference}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
-                        >
-                          🔗 Voir
-                        </a>
-                      )}
-                    </td>
-                    <td className="max-w-xs whitespace-pre-line font-medium">{i.designation}</td>
-                    <td className="text-gray-500">{i.packaging || "—"}</td>
-                    <td>
-                      <input
-                        type="number"
-                        step="1"
-                        min="0"
-                        value={i.orderQuantity}
-                        onChange={(e) => handleQuantityChange(i, e.target.value)}
-                        className="w-16"
-                      />
-                    </td>
-                    <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
-                    <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
-                    <td>
-                      <input
-                        type="date"
-                        value={toDateInputValue(i.orderedAt)}
-                        onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
-                        className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="date"
-                        value={toDateInputValue(i.receivedAt)}
-                        onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
-                        className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
-                      />
-                    </td>
-                    <td>
-                      <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                        <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                          ✏️
-                        </button>
-                        <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {displayedItems.length === 0 && (
-                  <tr>
-                    <td colSpan={10} className="py-6 text-center text-gray-400">
-                      Aucun article
-                    </td>
-                  </tr>
+          <div className="space-y-6">
+            {groupedItems.map(({ category, items }) => (
+              <div key={category ?? "__flat__"}>
+                {category !== null && (
+                  <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">{category}</h2>
                 )}
-              </tbody>
-            </table>
+                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("reference")}>
+                          Référence{sortArrow("reference")}
+                        </th>
+                        <th>Lien</th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("designation")}>
+                          Désignation{sortArrow("designation")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("packaging")}>
+                          Conditionnement{sortArrow("packaging")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("orderQuantity")}>
+                          Commande{sortArrow("orderQuantity")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("unitPriceHT")}>
+                          Prix U. HT{sortArrow("unitPriceHT")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("casePriceHT")}>
+                          Prix carton/colis HT{sortArrow("casePriceHT")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("orderedAt")}>
+                          📦 Commandé le{sortArrow("orderedAt")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("receivedAt")}>
+                          ✅ Reçu le{sortArrow("receivedAt")}
+                        </th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((i) => (
+                        <tr
+                          key={i.id}
+                          draggable={dragEnabled}
+                          onDragStart={() => dragEnabled && setDraggingId(i.id)}
+                          onDragOver={(e) => dragEnabled && e.preventDefault()}
+                          onDrop={() => dragEnabled && handleItemDrop(category, i.id)}
+                          onDragEnd={() => setDraggingId(null)}
+                          className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
+                            draggingId === i.id ? "opacity-40" : ""
+                          }`}
+                        >
+                          <td className="text-gray-500">{isUrl(i.reference) ? "—" : i.reference || "—"}</td>
+                          <td>
+                            {isUrl(i.reference) && (
+                              <a
+                                href={i.reference}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
+                              >
+                                🔗 Voir
+                              </a>
+                            )}
+                          </td>
+                          <td className="max-w-xs whitespace-pre-line font-medium">{i.designation}</td>
+                          <td className="text-gray-500">{i.packaging || "—"}</td>
+                          <td>
+                            <input
+                              type="number"
+                              step="1"
+                              min="0"
+                              value={i.orderQuantity}
+                              onChange={(e) => handleQuantityChange(i, e.target.value)}
+                              className="w-16"
+                            />
+                          </td>
+                          <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
+                          <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
+                          <td>
+                            <input
+                              type="date"
+                              value={toDateInputValue(i.orderedAt)}
+                              onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
+                              className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="date"
+                              value={toDateInputValue(i.receivedAt)}
+                              onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
+                              className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
+                            />
+                          </td>
+                          <td>
+                            <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
+                              <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                                ✏️
+                              </button>
+                              <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+            {displayedItems.length === 0 && (
+              <p className="py-6 text-center text-gray-400">Aucun article</p>
+            )}
           </div>
         </div>
       )}
@@ -751,19 +804,34 @@ export function MercurialeClient() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">Conditionnement</label>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Catégorie (optionnel)</label>
                 <input
-                  list="packaging-units-list"
-                  value={itemForm.packaging}
-                  onChange={(e) => setItemForm({ ...itemForm, packaging: e.target.value })}
+                  list="category-suggestions"
+                  placeholder="ex : Boissons"
+                  value={itemForm.category}
+                  onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
                   className="w-full"
                 />
-                <datalist id="packaging-units-list">
-                  {units.map((u) => (
-                    <option key={u.id} value={u.label} />
+                <datalist id="category-suggestions">
+                  {categorySuggestions.map((c) => (
+                    <option key={c} value={c} />
                   ))}
                 </datalist>
               </div>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Conditionnement</label>
+              <input
+                list="packaging-units-list"
+                value={itemForm.packaging}
+                onChange={(e) => setItemForm({ ...itemForm, packaging: e.target.value })}
+                className="w-full"
+              />
+              <datalist id="packaging-units-list">
+                {units.map((u) => (
+                  <option key={u.id} value={u.label} />
+                ))}
+              </datalist>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>

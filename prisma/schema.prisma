@@ -140,6 +140,7 @@ model SupplierItem {
   order         Int      @default(0) // ordre d'affichage dans le tableau, modifiable par glisser-déposer
   reference     String?
   designation   String
+  category      String?  // sous-catégorie libre au sein du fournisseur (ex: "Boissons", "Emballages")
   packaging     String?  // conditionnement
   orderQuantity Float    @default(0) // quantité à commander
   unitPriceHT   Float?

@@ -7,6 +7,7 @@ import { withErrorHandling } from "@/lib/api";
 const itemSchema = z.object({
   reference: z.string().optional().nullable(),
   designation: z.string().min(1),
+  category: z.string().optional().nullable(),
   packaging: z.string().optional().nullable(),
   orderQuantity: z.number().nonnegative().default(0),
   unitPriceHT: z.number().nonnegative().optional().nullable(),
