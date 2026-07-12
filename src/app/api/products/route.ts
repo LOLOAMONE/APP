@@ -5,7 +5,6 @@ import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 import {
   CHANNELS,
-  RECIPE_QUANTITY_UNITS,
   TVA_A_EMPORTER,
   TVA_SUR_PLACE,
   computeCostOfGoods,
@@ -22,7 +21,7 @@ const productSchema = z.object({
       z.object({
         ingredientId: z.string().min(1),
         quantity: z.number().positive(),
-        quantityUnit: z.enum(RECIPE_QUANTITY_UNITS),
+        quantityUnit: z.string().min(1),
         channel: z.enum(CHANNELS).default("BOTH"),
       })
     )
@@ -50,7 +49,7 @@ function withMargins(product: {
 export const GET = withErrorHandling(async () => {
   await requireMargesAccess();
   const products = await prisma.product.findMany({
-    orderBy: { name: "asc" },
+    orderBy: { order: "asc" },
     include: { ingredients: { include: { ingredient: true } } },
   });
 
@@ -62,12 +61,14 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   await requireMargesAccess();
   const data = productSchema.parse(await req.json());
 
+  const last = await prisma.product.findFirst({ orderBy: { order: "desc" } });
   const product = await prisma.product.create({
     data: {
       name: data.name,
       category: data.category,
       priceOnSite: data.priceOnSite,
       priceTakeaway: data.priceTakeaway,
+      order: (last?.order ?? -1) + 1,
       ingredients: {
         create: data.ingredients.map((i) => ({
           ingredientId: i.ingredientId,

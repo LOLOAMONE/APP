@@ -42,7 +42,7 @@ const menuInclude = {
 export const GET = withErrorHandling(async () => {
   await requireMargesAccess();
   const menus = await prisma.menu.findMany({
-    orderBy: { name: "asc" },
+    orderBy: { order: "asc" },
     include: menuInclude,
   });
   return NextResponse.json(menus.map((m) => ({ ...m, margins: withMargins(m) })));
@@ -52,11 +52,13 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   await requireMargesAccess();
   const data = menuSchema.parse(await req.json());
 
+  const last = await prisma.menu.findFirst({ orderBy: { order: "desc" } });
   const menu = await prisma.menu.create({
     data: {
       name: data.name,
       priceOnSite: data.priceOnSite,
       priceTakeaway: data.priceTakeaway,
+      order: (last?.order ?? -1) + 1,
       items: { create: data.items.map((i) => ({ productId: i.productId, quantity: i.quantity })) },
     },
     include: menuInclude,

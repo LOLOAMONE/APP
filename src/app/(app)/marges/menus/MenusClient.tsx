@@ -36,15 +36,34 @@ function emptyItem(products: ProductForMenu[]): FormItem {
   return { productId: products[0]?.id ?? "", quantity: "1" };
 }
 
-type SortKey = "name" | "onSitePercent" | "takeawayPercent";
+function moveById<T extends { id: string }>(list: T[], fromId: string, toId: string): T[] {
+  const fromIndex = list.findIndex((x) => x.id === fromId);
+  const toIndex = list.findIndex((x) => x.id === toId);
+  if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return list;
+  const copy = [...list];
+  const [moved] = copy.splice(fromIndex, 1);
+  copy.splice(toIndex, 0, moved);
+  return copy;
+}
+
+type SortKey =
+  | "custom"
+  | "name"
+  | "costOnSite"
+  | "costTakeaway"
+  | "priceOnSite"
+  | "onSitePercent"
+  | "priceTakeaway"
+  | "takeawayPercent";
 
 export function MenusClient() {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [products, setProducts] = useState<ProductForMenu[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("onSitePercent");
+  const [sortKey, setSortKey] = useState<SortKey>("custom");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Menu | null>(null);
@@ -165,7 +184,7 @@ export function MenusClient() {
     if (res.ok) await loadAll();
   }
 
-  function toggleSort(key: SortKey) {
+  function toggleSort(key: Exclude<SortKey, "custom">) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -176,10 +195,15 @@ export function MenusClient() {
 
   const rows = useMemo(() => {
     const filtered = menus.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()));
+    if (sortKey === "custom") return filtered;
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.name.localeCompare(b.name);
+      if (sortKey === "costOnSite") cmp = a.margins.onSite.cost - b.margins.onSite.cost;
+      if (sortKey === "costTakeaway") cmp = a.margins.takeaway.cost - b.margins.takeaway.cost;
+      if (sortKey === "priceOnSite") cmp = a.priceOnSite - b.priceOnSite;
       if (sortKey === "onSitePercent") cmp = a.margins.onSite.marginPercent - b.margins.onSite.marginPercent;
+      if (sortKey === "priceTakeaway") cmp = a.priceTakeaway - b.priceTakeaway;
       if (sortKey === "takeawayPercent") cmp = a.margins.takeaway.marginPercent - b.margins.takeaway.marginPercent;
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -188,17 +212,42 @@ export function MenusClient() {
 
   const sortArrow = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
 
+  const dragEnabled = sortKey === "custom" && search === "";
+
+  async function handleDrop(targetId: string) {
+    if (!draggingId || draggingId === targetId) {
+      setDraggingId(null);
+      return;
+    }
+    const reordered = moveById(menus, draggingId, targetId);
+    setMenus(reordered);
+    setDraggingId(null);
+    await fetch("/api/menus/reorder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: reordered.map((m) => m.id) }),
+    });
+  }
+
   return (
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-xl font-bold text-gray-900">Menus</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <input
             placeholder="Rechercher un menu..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full sm:w-56"
           />
+          {sortKey !== "custom" && (
+            <button
+              onClick={() => setSortKey("custom")}
+              className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
+            >
+              ↺ Ordre personnalisé
+            </button>
+          )}
           <button
             onClick={openCreate}
             className="whitespace-nowrap rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
@@ -208,6 +257,14 @@ export function MenusClient() {
           </button>
         </div>
       </div>
+
+      {!dragEnabled && (
+        <p className="mb-2 text-xs text-gray-400">
+          {search
+            ? "Le glisser-déposer est désactivé pendant une recherche."
+            : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
+        </p>
+      )}
 
       {loading ? (
         <p className="text-sm text-gray-500">Chargement...</p>
@@ -222,13 +279,21 @@ export function MenusClient() {
                   Menu{sortArrow("name")}
                 </th>
                 <th>Composition</th>
-                <th>Coût sur place</th>
-                <th>Coût à emporter</th>
-                <th>Prix sur place (TTC)</th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("costOnSite")}>
+                  Coût sur place{sortArrow("costOnSite")}
+                </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("costTakeaway")}>
+                  Coût à emporter{sortArrow("costTakeaway")}
+                </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("priceOnSite")}>
+                  Prix sur place (TTC){sortArrow("priceOnSite")}
+                </th>
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("onSitePercent")}>
                   Marge sur place{sortArrow("onSitePercent")}
                 </th>
-                <th>Prix à emporter (TTC)</th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("priceTakeaway")}>
+                  Prix à emporter (TTC){sortArrow("priceTakeaway")}
+                </th>
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("takeawayPercent")}>
                   Marge à emporter{sortArrow("takeawayPercent")}
                 </th>
@@ -237,7 +302,17 @@ export function MenusClient() {
             </thead>
             <tbody>
               {rows.map((m) => (
-                <tr key={m.id}>
+                <tr
+                  key={m.id}
+                  draggable={dragEnabled}
+                  onDragStart={() => dragEnabled && setDraggingId(m.id)}
+                  onDragOver={(e) => dragEnabled && e.preventDefault()}
+                  onDrop={() => dragEnabled && handleDrop(m.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                  className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
+                    draggingId === m.id ? "opacity-40" : ""
+                  }`}
+                >
                   <td className="font-medium">{m.name}</td>
                   <td className="text-gray-500">
                     {m.items.map((i) => `${i.quantity}× ${i.product.name}`).join(", ")}

@@ -4,11 +4,10 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
-import { INGREDIENT_UNITS } from "@/lib/margins";
 
 const ingredientSchema = z.object({
   name: z.string().min(1),
-  unit: z.enum(INGREDIENT_UNITS),
+  unit: z.string().min(1),
   price: z.number().nonnegative(),
   supplier: z.string().optional().nullable(),
 });

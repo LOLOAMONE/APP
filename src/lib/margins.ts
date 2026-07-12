@@ -3,45 +3,42 @@
 export const TVA_SUR_PLACE = 0.10;
 export const TVA_A_EMPORTER = 0.055;
 
+// Unités standards, toujours proposées. Des unités personnalisées (voir modèle MeasureUnit) peuvent
+// s'y ajouter : chacune se comporte alors comme sa propre famille, sans sous-unité (comme "piece").
 export const INGREDIENT_UNITS = ["kg", "L", "piece"] as const;
-export type IngredientUnit = (typeof INGREDIENT_UNITS)[number];
+export type IngredientUnit = string;
 
 export const RECIPE_QUANTITY_UNITS = ["g", "kg", "mL", "L", "piece"] as const;
-export type RecipeQuantityUnit = (typeof RECIPE_QUANTITY_UNITS)[number];
+export type RecipeQuantityUnit = string;
 
-const UNIT_FAMILY: Record<RecipeQuantityUnit, IngredientUnit> = {
-  g: "kg",
-  kg: "kg",
-  mL: "L",
-  L: "L",
-  piece: "piece",
-};
+// Seules les sous-unités de saisie (g, mL) doivent être déclarées ici : toute unité absente de
+// cette table (piece, ou une unité personnalisée) est considérée comme sa propre famille, facteur 1.
+const SUB_UNIT_FAMILY: Record<string, string> = { g: "kg", mL: "L" };
+const SUB_UNIT_FACTOR: Record<string, number> = { g: 1 / 1000, mL: 1 / 1000 };
 
-const TO_BASE_FACTOR: Record<RecipeQuantityUnit, number> = {
-  g: 1 / 1000,
-  kg: 1,
-  mL: 1 / 1000,
-  L: 1,
-  piece: 1,
-};
+function unitFamily(unit: string): string {
+  return SUB_UNIT_FAMILY[unit] ?? unit;
+}
 
 /** Unités de saisie compatibles avec l'unité d'achat d'un ingrédient (ex: kg -> g, kg). */
 export function allowedQuantityUnitsFor(ingredientUnit: IngredientUnit): RecipeQuantityUnit[] {
-  return RECIPE_QUANTITY_UNITS.filter((u) => UNIT_FAMILY[u] === ingredientUnit);
+  if (ingredientUnit === "kg") return ["g", "kg"];
+  if (ingredientUnit === "L") return ["mL", "L"];
+  return [ingredientUnit];
 }
 
-/** Convertit une quantité de recette dans l'unité de base de l'ingrédient (kg, L ou pièce). */
+/** Convertit une quantité de recette dans l'unité de base de l'ingrédient (kg, L, pièce ou unité personnalisée). */
 export function convertToIngredientUnit(
   quantity: number,
   quantityUnit: RecipeQuantityUnit,
   ingredientUnit: IngredientUnit
 ): number {
-  if (UNIT_FAMILY[quantityUnit] !== ingredientUnit) {
+  if (unitFamily(quantityUnit) !== ingredientUnit) {
     throw new Error(
       `Unité incompatible: ${quantityUnit} ne peut pas être convertie vers ${ingredientUnit}`
     );
   }
-  return quantity * TO_BASE_FACTOR[quantityUnit];
+  return quantity * (SUB_UNIT_FACTOR[quantityUnit] ?? 1);
 }
 
 export const CHANNELS = ["BOTH", "SUR_PLACE", "EMPORTER"] as const;

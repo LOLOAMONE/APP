@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireMargesAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
-import { CHANNELS, RECIPE_QUANTITY_UNITS } from "@/lib/margins";
+import { CHANNELS } from "@/lib/margins";
 
 const productSchema = z.object({
   name: z.string().min(1),
@@ -15,7 +15,7 @@ const productSchema = z.object({
       z.object({
         ingredientId: z.string().min(1),
         quantity: z.number().positive(),
-        quantityUnit: z.enum(RECIPE_QUANTITY_UNITS),
+        quantityUnit: z.string().min(1),
         channel: z.enum(CHANNELS).default("BOTH"),
       })
     )

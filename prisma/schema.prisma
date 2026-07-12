@@ -49,13 +49,21 @@ model ScheduleTemplateEntry {
 model Ingredient {
   id            String                 @id @default(cuid())
   name          String
-  unit          String                 // "kg" | "L" | "piece"
+  unit          String                 // "kg" | "L" | "piece" | unité personnalisée (voir MeasureUnit)
   price         Float                  // prix d'achat actuel, dans l'unité ci-dessus
   supplier      String?
+  order         Int                    @default(0) // ordre d'affichage, modifiable par glisser-déposer
   priceHistory  IngredientPriceHistory[]
   productLinks  ProductIngredient[]
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
+}
+
+// Liste réutilisable d'unités personnalisées (en plus de kg/L/pièce), utilisée à la fois comme
+// unité d'achat d'un ingrédient et comme unité de quantité en recette pour cet ingrédient.
+model MeasureUnit {
+  id    String @id @default(cuid())
+  label String @unique
 }
 
 model IngredientPriceHistory {
@@ -72,6 +80,7 @@ model Product {
   category        String              @default("Autre")
   priceOnSite     Float               // prix de vente TTC sur place
   priceTakeaway   Float               // prix de vente TTC à emporter
+  order           Int                 @default(0) // ordre d'affichage au sein de sa catégorie, modifiable par glisser-déposer
   ingredients     ProductIngredient[]
   menuLinks       MenuItem[]
   createdAt       DateTime            @default(now())
@@ -83,6 +92,7 @@ model Menu {
   name          String
   priceOnSite   Float      // prix de vente TTC sur place
   priceTakeaway Float      // prix de vente TTC à emporter
+  order         Int        @default(0) // ordre d'affichage, modifiable par glisser-déposer
   items         MenuItem[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
