@@ -11,6 +11,7 @@
     "seed": "tsx prisma/seed.ts",
     "seed:menu": "tsx prisma/seed-menu.ts",
     "seed:mercuriale": "tsx prisma/seed-mercuriale.ts",
+    "seed:architecture": "tsx prisma/seed-architecture.ts",
     "migrate": "prisma migrate dev"
   },
   "prisma": {
