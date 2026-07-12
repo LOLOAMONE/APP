@@ -25,6 +25,8 @@ type Supplier = {
   items: SupplierItem[];
 };
 
+type PackagingUnitRow = { id: string; label: string };
+
 const emptySupplierForm = {
   name: "",
   orderSchedule: "",
@@ -39,6 +41,16 @@ function isUrl(value: string | null): value is string {
   return !!value && /^https?:\/\//i.test(value);
 }
 
+function moveById<T extends { id: string }>(list: T[], fromId: string, toId: string): T[] {
+  const fromIndex = list.findIndex((x) => x.id === fromId);
+  const toIndex = list.findIndex((x) => x.id === toId);
+  if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return list;
+  const copy = [...list];
+  const [moved] = copy.splice(fromIndex, 1);
+  copy.splice(toIndex, 0, moved);
+  return copy;
+}
+
 const emptyItemForm = {
   reference: "",
   designation: "",
@@ -48,11 +60,17 @@ const emptyItemForm = {
   casePriceHT: "",
 };
 
+type ItemSortKey = "custom" | "reference" | "designation" | "packaging" | "orderQuantity" | "unitPriceHT" | "casePriceHT";
+
 export function MercurialeClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [units, setUnits] = useState<PackagingUnitRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<ItemSortKey>("custom");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const [showSupplierForm, setShowSupplierForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -62,17 +80,21 @@ export function MercurialeClient() {
   const [editingItem, setEditingItem] = useState<SupplierItem | null>(null);
   const [itemForm, setItemForm] = useState(emptyItemForm);
 
+  const [showUnitsModal, setShowUnitsModal] = useState(false);
+  const [newUnitLabel, setNewUnitLabel] = useState("");
+
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function loadAll() {
     setLoading(true);
-    const res = await fetch("/api/suppliers");
-    if (res.ok) {
-      const data: Supplier[] = await res.json();
+    const [supRes, unitRes] = await Promise.all([fetch("/api/suppliers"), fetch("/api/packaging-units")]);
+    if (supRes.ok) {
+      const data: Supplier[] = await supRes.json();
       setSuppliers(data);
-      setSelectedId((prev) => prev && data.some((s) => s.id === prev) ? prev : data[0]?.id ?? null);
+      setSelectedId((prev) => (prev && data.some((s) => s.id === prev) ? prev : data[0]?.id ?? null));
     }
+    if (unitRes.ok) setUnits(await unitRes.json());
     setLoading(false);
   }
 
@@ -82,15 +104,38 @@ export function MercurialeClient() {
 
   const selected = suppliers.find((s) => s.id === selectedId) ?? null;
 
-  const filteredItems = useMemo(() => {
+  const displayedItems = useMemo(() => {
     if (!selected) return [];
     const q = search.toLowerCase();
-    return selected.items.filter(
-      (i) =>
-        i.designation.toLowerCase().includes(q) ||
-        (i.reference ?? "").toLowerCase().includes(q)
+    const filtered = selected.items.filter(
+      (i) => i.designation.toLowerCase().includes(q) || (i.reference ?? "").toLowerCase().includes(q)
     );
-  }, [selected, search]);
+    if (sortKey === "custom") return filtered;
+    const sorted = [...filtered].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "reference") cmp = (a.reference ?? "").localeCompare(b.reference ?? "");
+      if (sortKey === "designation") cmp = a.designation.localeCompare(b.designation);
+      if (sortKey === "packaging") cmp = (a.packaging ?? "").localeCompare(b.packaging ?? "");
+      if (sortKey === "orderQuantity") cmp = a.orderQuantity - b.orderQuantity;
+      if (sortKey === "unitPriceHT") cmp = (a.unitPriceHT ?? 0) - (b.unitPriceHT ?? 0);
+      if (sortKey === "casePriceHT") cmp = (a.casePriceHT ?? 0) - (b.casePriceHT ?? 0);
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }, [selected, search, sortKey, sortDir]);
+
+  const dragEnabled = sortKey === "custom" && search === "";
+
+  function toggleSort(key: Exclude<ItemSortKey, "custom">) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortArrow = (key: ItemSortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
 
   function openCreateSupplier() {
     setEditingSupplier(null);
@@ -155,6 +200,36 @@ export function MercurialeClient() {
     if (res.ok) await loadAll();
   }
 
+  async function handleSupplierDrop(targetId: string) {
+    if (!draggingId || draggingId === targetId) {
+      setDraggingId(null);
+      return;
+    }
+    const reordered = moveById(suppliers, draggingId, targetId);
+    setSuppliers(reordered);
+    setDraggingId(null);
+    await fetch("/api/suppliers/reorder", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: reordered.map((s) => s.id) }),
+    });
+  }
+
+  async function handleItemDrop(targetId: string) {
+    if (!draggingId || draggingId === targetId || !selected) {
+      setDraggingId(null);
+      return;
+    }
+    const reorderedItems = moveById(selected.items, draggingId, targetId);
+    setSuppliers((prev) => prev.map((s) => (s.id === selected.id ? { ...s, items: reorderedItems } : s)));
+    setDraggingId(null);
+    await fetch(`/api/suppliers/${selected.id}/items/reorder`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: reorderedItems.map((i) => i.id) }),
+    });
+  }
+
   function openCreateItem() {
     setEditingItem(null);
     setItemForm(emptyItemForm);
@@ -202,6 +277,13 @@ export function MercurialeClient() {
         setError(data.error || "Erreur lors de l'enregistrement");
         return;
       }
+      if (itemForm.packaging && !units.some((u) => u.label === itemForm.packaging)) {
+        await fetch("/api/packaging-units", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ label: itemForm.packaging }),
+        });
+      }
       setShowItemForm(false);
       await loadAll();
     } finally {
@@ -238,6 +320,26 @@ export function MercurialeClient() {
     });
   }
 
+  async function handleAddUnit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newUnitLabel.trim()) return;
+    const res = await fetch("/api/packaging-units", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: newUnitLabel.trim() }),
+    });
+    if (res.ok) {
+      setNewUnitLabel("");
+      const unitRes = await fetch("/api/packaging-units");
+      if (unitRes.ok) setUnits(await unitRes.json());
+    }
+  }
+
+  async function handleDeleteUnit(id: string) {
+    const res = await fetch(`/api/packaging-units/${id}`, { method: "DELETE" });
+    if (res.ok) setUnits((prev) => prev.filter((u) => u.id !== id));
+  }
+
   if (loading) {
     return <p className="text-sm text-gray-500">Chargement...</p>;
   }
@@ -246,22 +348,36 @@ export function MercurialeClient() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">Mercuriale</h1>
-        <button
-          onClick={openCreateSupplier}
-          className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          + Fournisseur
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowUnitsModal(true)}
+            className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Unités
+          </button>
+          <button
+            onClick={openCreateSupplier}
+            className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            + Fournisseur
+          </button>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
         {suppliers.map((s) => (
           <button
             key={s.id}
+            draggable
+            onDragStart={() => setDraggingId(s.id)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleSupplierDrop(s.id)}
+            onDragEnd={() => setDraggingId(null)}
             onClick={() => setSelectedId(s.id)}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            title="Glisser pour réordonner"
+            className={`cursor-grab select-none rounded-md px-3 py-1.5 text-sm font-medium active:cursor-grabbing ${
               selectedId === s.id ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
-            }`}
+            } ${draggingId === s.id ? "opacity-40" : ""}`}
           >
             {s.name}
           </button>
@@ -335,31 +451,71 @@ export function MercurialeClient() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-full sm:w-64"
             />
-            <button
-              onClick={openCreateItem}
-              className="whitespace-nowrap rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-            >
-              + Article
-            </button>
+            <div className="flex items-center gap-3">
+              {sortKey !== "custom" && (
+                <button
+                  onClick={() => setSortKey("custom")}
+                  className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
+                >
+                  ↺ Ordre personnalisé
+                </button>
+              )}
+              <button
+                onClick={openCreateItem}
+                className="whitespace-nowrap rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                + Article
+              </button>
+            </div>
           </div>
+
+          {!dragEnabled && (
+            <p className="mb-2 text-xs text-gray-400">
+              {search
+                ? "Le glisser-déposer est désactivé pendant une recherche."
+                : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
+            </p>
+          )}
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <table>
               <thead>
                 <tr>
-                  <th>Référence</th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("reference")}>
+                    Référence{sortArrow("reference")}
+                  </th>
                   <th>Lien</th>
-                  <th>Désignation</th>
-                  <th>Conditionnement</th>
-                  <th>Commande</th>
-                  <th>Prix U. HT</th>
-                  <th>Prix carton/colis HT</th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("designation")}>
+                    Désignation{sortArrow("designation")}
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("packaging")}>
+                    Conditionnement{sortArrow("packaging")}
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("orderQuantity")}>
+                    Commande{sortArrow("orderQuantity")}
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("unitPriceHT")}>
+                    Prix U. HT{sortArrow("unitPriceHT")}
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("casePriceHT")}>
+                    Prix carton/colis HT{sortArrow("casePriceHT")}
+                  </th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((i) => (
-                  <tr key={i.id}>
+                {displayedItems.map((i) => (
+                  <tr
+                    key={i.id}
+                    draggable={dragEnabled}
+                    onDragStart={() => dragEnabled && setDraggingId(i.id)}
+                    onDragOver={(e) => dragEnabled && e.preventDefault()}
+                    onDrop={() => dragEnabled && handleItemDrop(i.id)}
+                    onDragEnd={() => setDraggingId(null)}
+                    className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
+                      draggingId === i.id ? "opacity-40" : ""
+                    }`}
+                  >
                     <td className="text-gray-500">{isUrl(i.reference) ? "—" : i.reference || "—"}</td>
                     <td>
                       {isUrl(i.reference) && (
@@ -385,7 +541,7 @@ export function MercurialeClient() {
                         className="w-16"
                       />
                     </td>
-                    <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(4)} €` : "—"}</td>
+                    <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
                     <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
                     <td>
                       <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
@@ -399,7 +555,7 @@ export function MercurialeClient() {
                     </td>
                   </tr>
                 ))}
-                {filteredItems.length === 0 && (
+                {displayedItems.length === 0 && (
                   <tr>
                     <td colSpan={8} className="py-6 text-center text-gray-400">
                       Aucun article
@@ -531,10 +687,16 @@ export function MercurialeClient() {
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700">Conditionnement</label>
                 <input
+                  list="packaging-units-list"
                   value={itemForm.packaging}
                   onChange={(e) => setItemForm({ ...itemForm, packaging: e.target.value })}
                   className="w-full"
                 />
+                <datalist id="packaging-units-list">
+                  {units.map((u) => (
+                    <option key={u.id} value={u.label} />
+                  ))}
+                </datalist>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -553,7 +715,7 @@ export function MercurialeClient() {
                 <label className="mb-1 block text-sm font-medium text-gray-700">Prix U. HT (€)</label>
                 <input
                   type="number"
-                  step="0.0001"
+                  step="0.01"
                   min="0"
                   value={itemForm.unitPriceHT}
                   onChange={(e) => setItemForm({ ...itemForm, unitPriceHT: e.target.value })}
@@ -592,6 +754,38 @@ export function MercurialeClient() {
               </button>
             </div>
           </form>
+        </Modal>
+      )}
+
+      {showUnitsModal && (
+        <Modal title="Unités / conditionnements" onClose={() => setShowUnitsModal(false)}>
+          <form onSubmit={handleAddUnit} className="mb-4 flex gap-2">
+            <input
+              placeholder="ex : Carton de 24"
+              value={newUnitLabel}
+              onChange={(e) => setNewUnitLabel(e.target.value)}
+              className="flex-1"
+            />
+            <button
+              type="submit"
+              className="whitespace-nowrap rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              + Ajouter
+            </button>
+          </form>
+          <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200">
+            <ul>
+              {units.map((u) => (
+                <li key={u.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
+                  {u.label}
+                  <button onClick={() => handleDeleteUnit(u.id)} className="text-red-600 hover:text-red-800">
+                    Supprimer
+                  </button>
+                </li>
+              ))}
+              {units.length === 0 && <li className="px-3 py-4 text-center text-sm text-gray-400">Aucune unité enregistrée</li>}
+            </ul>
+          </div>
         </Modal>
       )}
     </div>

@@ -31,8 +31,19 @@ model Employee {
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   shifts      Shift[]
   absences    Absence[]
+  scheduleTemplate ScheduleTemplateEntry[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// Créneau récurrent du planning de base d'un employé (ex: tous les lundis 9h-17h).
+model ScheduleTemplateEntry {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  dayOfWeek  Int      // 0 = lundi ... 6 = dimanche
+  startTime  String   // "HH:mm"
+  endTime    String   // "HH:mm"
 }
 
 model Ingredient {
@@ -100,6 +111,7 @@ model ProductIngredient {
 model Supplier {
   id            String         @id @default(cuid())
   name          String
+  order         Int            @default(0) // ordre d'affichage des sous-onglets, modifiable par glisser-déposer
   orderSchedule String?        // jour/délai de commande et de livraison
   minimumOrder  String?        // franco / minimum de commande
   email         String?
@@ -115,6 +127,7 @@ model SupplierItem {
   id            String   @id @default(cuid())
   supplierId    String
   supplier      Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  order         Int      @default(0) // ordre d'affichage dans le tableau, modifiable par glisser-déposer
   reference     String?
   designation   String
   packaging     String?  // conditionnement
@@ -123,6 +136,12 @@ model SupplierItem {
   casePriceHT   Float?   // prix carton / colis / lot HT
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+// Liste réutilisable de conditionnements (ex: "Carton de 12", "Lot de 6") proposée dans le formulaire article.
+model PackagingUnit {
+  id    String @id @default(cuid())
+  label String @unique
 }
 
 model Shift {

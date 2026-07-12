@@ -18,10 +18,14 @@ const UNIT_LABELS: Record<string, string> = { kg: "kg", L: "L", piece: "pièce" 
 
 const emptyForm = { name: "", unit: "kg" as IngredientUnit, price: "", supplier: "" };
 
+type SortKey = "name" | "unit" | "price" | "supplier";
+
 export function IngredientsClient() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [editing, setEditing] = useState<Ingredient | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -110,9 +114,28 @@ export function IngredientsClient() {
     if (res.ok) setHistory(await res.json());
   }
 
-  const filtered = ingredients.filter((i) =>
-    i.name.toLowerCase().includes(search.toLowerCase())
-  );
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortArrow = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
+
+  const filtered = ingredients
+    .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      if (!sortKey) return 0;
+      let cmp = 0;
+      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
+      if (sortKey === "unit") cmp = a.unit.localeCompare(b.unit);
+      if (sortKey === "price") cmp = a.price - b.price;
+      if (sortKey === "supplier") cmp = (a.supplier ?? "").localeCompare(b.supplier ?? "");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
 
   return (
     <div>
@@ -141,10 +164,18 @@ export function IngredientsClient() {
           <table>
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>Unité</th>
-                <th>Prix d&apos;achat</th>
-                <th>Fournisseur</th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                  Nom{sortArrow("name")}
+                </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("unit")}>
+                  Unité{sortArrow("unit")}
+                </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("price")}>
+                  Prix d&apos;achat{sortArrow("price")}
+                </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("supplier")}>
+                  Fournisseur{sortArrow("supplier")}
+                </th>
                 <th></th>
               </tr>
             </thead>

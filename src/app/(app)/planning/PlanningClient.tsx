@@ -111,6 +111,27 @@ export function PlanningClient({
     if (res.ok) await loadWeek();
   }
 
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+
+  async function handleApplyTemplate() {
+    if (!confirm(`Appliquer le planning de base à la semaine du ${weekStartISO} ?`)) return;
+    setApplyingTemplate(true);
+    try {
+      const res = await fetch("/api/shifts/apply-template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekStart: weekStartISO }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await loadWeek();
+        alert(`${data.created} créneau(x) créé(s) à partir du planning de base.`);
+      }
+    } finally {
+      setApplyingTemplate(false);
+    }
+  }
+
   const visibleEmployees = isAdmin ? employees : employees;
 
   return (
@@ -129,6 +150,15 @@ export function PlanningClient({
               >
                 Gérer les employés
               </Link>
+            )}
+            {isAdmin && (
+              <button
+                onClick={handleApplyTemplate}
+                disabled={applyingTemplate}
+                className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                {applyingTemplate ? "Application..." : "Appliquer le planning de base"}
+              </button>
             )}
             <button
               onClick={() => setWeekStart((d) => addDays(d, -7))}

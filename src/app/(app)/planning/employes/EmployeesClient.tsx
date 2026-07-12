@@ -13,12 +13,25 @@ type Employee = {
 
 const emptyForm = { name: "", position: "", hourlyRate: "", username: "", password: "" };
 
+type SortKey = "name" | "position" | "hourlyRate";
+
+const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+type TemplateDay = { enabled: boolean; startTime: string; endTime: string };
+
+function emptyTemplate(): TemplateDay[] {
+  return DAY_LABELS.map(() => ({ enabled: false, startTime: "09:00", endTime: "17:00" }));
+}
+
 export function EmployeesClient() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [template, setTemplate] = useState<TemplateDay[]>(emptyTemplate());
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -36,11 +49,12 @@ export function EmployeesClient() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
+    setTemplate(emptyTemplate());
     setError(null);
     setShowForm(true);
   }
 
-  function openEdit(emp: Employee) {
+  async function openEdit(emp: Employee) {
     setEditing(emp);
     setForm({
       name: emp.name,
@@ -50,7 +64,23 @@ export function EmployeesClient() {
       password: "",
     });
     setError(null);
+    setTemplate(emptyTemplate());
     setShowForm(true);
+
+    const res = await fetch(`/api/employees/${emp.id}/schedule-template`);
+    if (res.ok) {
+      const entries: { dayOfWeek: number; startTime: string; endTime: string }[] = await res.json();
+      setTemplate((prev) =>
+        prev.map((day, index) => {
+          const entry = entries.find((e) => e.dayOfWeek === index);
+          return entry ? { enabled: true, startTime: entry.startTime, endTime: entry.endTime } : day;
+        })
+      );
+    }
+  }
+
+  function updateTemplateDay(index: number, patch: Partial<TemplateDay>) {
+    setTemplate((prev) => prev.map((day, i) => (i === index ? { ...day, ...patch } : day)));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -86,6 +116,26 @@ export function EmployeesClient() {
         setError(data.error || "Erreur lors de l'enregistrement");
         return;
       }
+
+      const savedEmployee = editing ?? (await res.json());
+      const employeeId = editing ? editing.id : savedEmployee.id;
+
+      const templateEntries = template
+        .map((day, index) => ({ ...day, dayOfWeek: index }))
+        .filter((day) => day.enabled)
+        .map(({ dayOfWeek, startTime, endTime }) => ({ dayOfWeek, startTime, endTime }));
+
+      const templateRes = await fetch(`/api/employees/${employeeId}/schedule-template`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entries: templateEntries }),
+      });
+      if (!templateRes.ok) {
+        const data = await templateRes.json().catch(() => ({}));
+        setError(data.error || "Employé enregistré, mais le planning de base n'a pas pu être sauvegardé");
+        return;
+      }
+
       setShowForm(false);
       await load();
     } finally {
@@ -98,6 +148,26 @@ export function EmployeesClient() {
     const res = await fetch(`/api/employees/${emp.id}`, { method: "DELETE" });
     if (res.ok) await load();
   }
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortArrow = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
+
+  const sortedEmployees = [...employees].sort((a, b) => {
+    if (!sortKey) return 0;
+    let cmp = 0;
+    if (sortKey === "name") cmp = a.name.localeCompare(b.name);
+    if (sortKey === "position") cmp = a.position.localeCompare(b.position);
+    if (sortKey === "hourlyRate") cmp = (a.hourlyRate ?? 0) - (b.hourlyRate ?? 0);
+    return sortDir === "asc" ? cmp : -cmp;
+  });
 
   return (
     <div>
@@ -123,14 +193,20 @@ export function EmployeesClient() {
           <table>
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>Poste</th>
-                <th>Taux horaire</th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                  Nom{sortArrow("name")}
+                </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("position")}>
+                  Poste{sortArrow("position")}
+                </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("hourlyRate")}>
+                  Taux horaire{sortArrow("hourlyRate")}
+                </th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {employees.map((emp) => (
+              {sortedEmployees.map((emp) => (
                 <tr key={emp.id}>
                   <td className="font-medium">{emp.name}</td>
                   <td>{emp.position}</td>
@@ -215,6 +291,49 @@ export function EmployeesClient() {
                   />
                 </div>
               </div>
+            </div>
+
+            <div className="border-t border-gray-100 pt-3">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
+                Planning de base (horaires récurrents)
+              </p>
+              <div className="space-y-2">
+                {DAY_LABELS.map((label, index) => {
+                  const day = template[index];
+                  return (
+                    <div key={label} className="flex items-center gap-2">
+                      <label className="flex w-28 shrink-0 items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={day.enabled}
+                          onChange={(e) => updateTemplateDay(index, { enabled: e.target.checked })}
+                          className="h-4 w-4"
+                        />
+                        {label}
+                      </label>
+                      <input
+                        type="time"
+                        value={day.startTime}
+                        onChange={(e) => updateTemplateDay(index, { startTime: e.target.value })}
+                        disabled={!day.enabled}
+                        className="w-full disabled:opacity-40"
+                      />
+                      <span className="text-gray-400">à</span>
+                      <input
+                        type="time"
+                        value={day.endTime}
+                        onChange={(e) => updateTemplateDay(index, { endTime: e.target.value })}
+                        disabled={!day.enabled}
+                        className="w-full disabled:opacity-40"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-2 text-xs text-gray-400">
+                Utilisé par le bouton « Appliquer le planning de base » dans le Planning pour créer les créneaux
+                d&apos;une semaine automatiquement.
+              </p>
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}

@@ -17,7 +17,13 @@ export const POST = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
     await requireMercurialeAccess();
     const data = itemSchema.parse(await req.json());
-    const item = await prisma.supplierItem.create({ data: { ...data, supplierId: params.id } });
+    const last = await prisma.supplierItem.findFirst({
+      where: { supplierId: params.id },
+      orderBy: { order: "desc" },
+    });
+    const item = await prisma.supplierItem.create({
+      data: { ...data, supplierId: params.id, order: (last?.order ?? -1) + 1 },
+    });
     return NextResponse.json(item, { status: 201 });
   }
 );

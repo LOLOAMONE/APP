@@ -17,8 +17,8 @@ const supplierSchema = z.object({
 export const GET = withErrorHandling(async () => {
   await requireMercurialeAccess();
   const suppliers = await prisma.supplier.findMany({
-    orderBy: { name: "asc" },
-    include: { items: { orderBy: { designation: "asc" } } },
+    orderBy: { order: "asc" },
+    include: { items: { orderBy: { order: "asc" } } },
   });
   return NextResponse.json(suppliers);
 });
@@ -26,6 +26,10 @@ export const GET = withErrorHandling(async () => {
 export const POST = withErrorHandling(async (req: NextRequest) => {
   await requireMercurialeAccess();
   const data = supplierSchema.parse(await req.json());
-  const supplier = await prisma.supplier.create({ data, include: { items: true } });
+  const last = await prisma.supplier.findFirst({ orderBy: { order: "desc" } });
+  const supplier = await prisma.supplier.create({
+    data: { ...data, order: (last?.order ?? -1) + 1 },
+    include: { items: true },
+  });
   return NextResponse.json(supplier, { status: 201 });
 });

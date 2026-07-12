@@ -6,7 +6,7 @@ export const config = {
 };
 
 const MARGES_PATHS = ["/marges", "/api/ingredients", "/api/products", "/api/menus"];
-const MERCURIALE_PATHS = ["/mercuriale", "/api/suppliers", "/api/supplier-items"];
+const MERCURIALE_PATHS = ["/mercuriale", "/api/suppliers", "/api/supplier-items", "/api/packaging-units"];
 const USERS_PATHS = ["/api/users"];
 
 export async function middleware(req: NextRequest) {
