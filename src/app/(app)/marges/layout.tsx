@@ -7,6 +7,7 @@ const SUB_TABS = [
   { href: "/marges/produits", label: "Produits & marges" },
   { href: "/marges/menus", label: "Menus" },
   { href: "/marges/ingredients", label: "Ingrédients" },
+  { href: "/marges/carte", label: "Carte" },
 ];
 
 export default function MargesLayout({ children }: { children: React.ReactNode }) {

@@ -213,11 +213,11 @@ export function EmployeesClient() {
                   <td>{emp.hourlyRate != null ? `${emp.hourlyRate.toFixed(2)} €/h` : "—"}</td>
                   <td>
                     <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                      <button onClick={() => openEdit(emp)} className="text-brand-600 hover:text-brand-800">
-                        Modifier
+                      <button onClick={() => openEdit(emp)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                        ✏️
                       </button>
-                      <button onClick={() => handleDelete(emp)} className="text-red-600 hover:text-red-800">
-                        Supprimer
+                      <button onClick={() => handleDelete(emp)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                        🗑️
                       </button>
                     </div>
                   </td>

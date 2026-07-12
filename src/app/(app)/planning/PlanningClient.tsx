@@ -538,8 +538,8 @@ function AbsencesSection({
                         </>
                       )}
                       {isAdmin && (
-                        <button onClick={() => handleDelete(a)} className="text-gray-400 hover:text-red-600">
-                          Supprimer
+                        <button onClick={() => handleDelete(a)} title="Supprimer" aria-label="Supprimer" className="text-gray-400 hover:text-red-600">
+                          🗑️
                         </button>
                       )}
                     </div>

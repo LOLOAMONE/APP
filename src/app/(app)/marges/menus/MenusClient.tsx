@@ -347,11 +347,11 @@ export function MenusClient() {
                   </td>
                   <td>
                     <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                      <button onClick={() => openEdit(m)} className="text-brand-600 hover:text-brand-800">
-                        Modifier
+                      <button onClick={() => openEdit(m)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                        ✏️
                       </button>
-                      <button onClick={() => handleDelete(m)} className="text-red-600 hover:text-red-800">
-                        Supprimer
+                      <button onClick={() => handleDelete(m)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                        🗑️
                       </button>
                     </div>
                   </td>

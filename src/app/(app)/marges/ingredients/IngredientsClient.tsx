@@ -279,14 +279,14 @@ export function IngredientsClient() {
                     <td>{ing.supplier || "—"}</td>
                     <td>
                       <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                        <button onClick={() => openHistory(ing)} className="text-gray-500 hover:text-gray-700">
-                          Historique
+                        <button onClick={() => openHistory(ing)} title="Historique" aria-label="Historique" className="text-gray-500 hover:text-gray-700">
+                          🕒
                         </button>
-                        <button onClick={() => openEdit(ing)} className="text-brand-600 hover:text-brand-800">
-                          Modifier
+                        <button onClick={() => openEdit(ing)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                          ✏️
                         </button>
-                        <button onClick={() => handleDelete(ing)} className="text-red-600 hover:text-red-800">
-                          Supprimer
+                        <button onClick={() => handleDelete(ing)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                          🗑️
                         </button>
                       </div>
                     </td>
@@ -417,8 +417,8 @@ export function IngredientsClient() {
               {units.map((u) => (
                 <li key={u.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
                   {u.label}
-                  <button onClick={() => handleDeleteUnit(u.id)} className="text-red-600 hover:text-red-800">
-                    Supprimer
+                  <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                    🗑️
                   </button>
                 </li>
               ))}

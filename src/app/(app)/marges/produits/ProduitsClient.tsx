@@ -435,11 +435,11 @@ export function ProduitsClient() {
                         </td>
                         <td>
                           <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                            <button onClick={() => openEdit(p)} className="text-brand-600 hover:text-brand-800">
-                              Modifier
+                            <button onClick={() => openEdit(p)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                              ✏️
                             </button>
-                            <button onClick={() => handleDelete(p)} className="text-red-600 hover:text-red-800">
-                              Supprimer
+                            <button onClick={() => handleDelete(p)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                              🗑️
                             </button>
                           </div>
                         </td>

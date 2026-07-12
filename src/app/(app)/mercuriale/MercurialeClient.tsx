@@ -435,11 +435,11 @@ export function MercurialeClient() {
                 !selected.notes && <p className="text-gray-400">Aucune information renseignée.</p>}
             </div>
             <div className="flex shrink-0 gap-3 text-sm">
-              <button onClick={() => openEditSupplier(selected)} className="text-brand-600 hover:text-brand-800">
-                Modifier
+              <button onClick={() => openEditSupplier(selected)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                ✏️
               </button>
-              <button onClick={() => handleDeleteSupplier(selected)} className="text-red-600 hover:text-red-800">
-                Supprimer
+              <button onClick={() => handleDeleteSupplier(selected)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                🗑️
               </button>
             </div>
           </div>
@@ -545,11 +545,11 @@ export function MercurialeClient() {
                     <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
                     <td>
                       <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                        <button onClick={() => openEditItem(i)} className="text-brand-600 hover:text-brand-800">
-                          Modifier
+                        <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                          ✏️
                         </button>
-                        <button onClick={() => handleDeleteItem(i)} className="text-red-600 hover:text-red-800">
-                          Supprimer
+                        <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                          🗑️
                         </button>
                       </div>
                     </td>
@@ -778,8 +778,8 @@ export function MercurialeClient() {
               {units.map((u) => (
                 <li key={u.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
                   {u.label}
-                  <button onClick={() => handleDeleteUnit(u.id)} className="text-red-600 hover:text-red-800">
-                    Supprimer
+                  <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                    🗑️
                   </button>
                 </li>
               ))}
