@@ -93,14 +93,22 @@ function moveById<T extends { id: string }>(list: T[], fromId: string, toId: str
   return copy;
 }
 
+function marginColorClass(percent: number): string {
+  if (percent >= 60) return "text-green-600";
+  if (percent >= 40) return "text-orange-500";
+  return "text-red-600";
+}
+
 type SortKey =
   | "custom"
   | "name"
   | "costOnSite"
   | "costTakeaway"
   | "priceOnSite"
+  | "onSiteMarginEuros"
   | "onSitePercent"
   | "priceTakeaway"
+  | "takeawayMarginEuros"
   | "takeawayPercent";
 
 export function ProduitsClient() {
@@ -265,8 +273,10 @@ export function ProduitsClient() {
       if (sortKey === "costOnSite") cmp = a.margins.onSite.cost - b.margins.onSite.cost;
       if (sortKey === "costTakeaway") cmp = a.margins.takeaway.cost - b.margins.takeaway.cost;
       if (sortKey === "priceOnSite") cmp = a.priceOnSite - b.priceOnSite;
+      if (sortKey === "onSiteMarginEuros") cmp = a.margins.onSite.marginEuros - b.margins.onSite.marginEuros;
       if (sortKey === "onSitePercent") cmp = a.margins.onSite.marginPercent - b.margins.onSite.marginPercent;
       if (sortKey === "priceTakeaway") cmp = a.priceTakeaway - b.priceTakeaway;
+      if (sortKey === "takeawayMarginEuros") cmp = a.margins.takeaway.marginEuros - b.margins.takeaway.marginEuros;
       if (sortKey === "takeawayPercent") cmp = a.margins.takeaway.marginPercent - b.margins.takeaway.marginPercent;
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -379,14 +389,20 @@ export function ProduitsClient() {
                       <th className="cursor-pointer select-none" onClick={() => toggleSort("priceOnSite")}>
                         Prix sur place (TTC){sortArrow("priceOnSite")}
                       </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("onSiteMarginEuros")}>
+                        Marge sur place (€){sortArrow("onSiteMarginEuros")}
+                      </th>
                       <th className="cursor-pointer select-none" onClick={() => toggleSort("onSitePercent")}>
-                        Marge sur place{sortArrow("onSitePercent")}
+                        % sur place{sortArrow("onSitePercent")}
                       </th>
                       <th className="cursor-pointer select-none" onClick={() => toggleSort("priceTakeaway")}>
                         Prix à emporter (TTC){sortArrow("priceTakeaway")}
                       </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("takeawayMarginEuros")}>
+                        Marge à emporter (€){sortArrow("takeawayMarginEuros")}
+                      </th>
                       <th className="cursor-pointer select-none" onClick={() => toggleSort("takeawayPercent")}>
-                        Marge à emporter{sortArrow("takeawayPercent")}
+                        % à emporter{sortArrow("takeawayPercent")}
                       </th>
                       <th></th>
                     </tr>
@@ -408,12 +424,14 @@ export function ProduitsClient() {
                         <td>{p.margins.onSite.cost.toFixed(2)} €</td>
                         <td>{p.margins.takeaway.cost.toFixed(2)} €</td>
                         <td>{p.priceOnSite.toFixed(2)} €</td>
-                        <td className={p.margins.onSite.marginPercent < 0 ? "text-red-600" : ""}>
-                          {p.margins.onSite.marginEuros.toFixed(2)} € ({p.margins.onSite.marginPercent.toFixed(0)}%)
+                        <td>{p.margins.onSite.marginEuros.toFixed(2)} €</td>
+                        <td className={`font-semibold ${marginColorClass(p.margins.onSite.marginPercent)}`}>
+                          {p.margins.onSite.marginPercent.toFixed(0)}%
                         </td>
                         <td>{p.priceTakeaway.toFixed(2)} €</td>
-                        <td className={p.margins.takeaway.marginPercent < 0 ? "text-red-600" : ""}>
-                          {p.margins.takeaway.marginEuros.toFixed(2)} € ({p.margins.takeaway.marginPercent.toFixed(0)}%)
+                        <td>{p.margins.takeaway.marginEuros.toFixed(2)} €</td>
+                        <td className={`font-semibold ${marginColorClass(p.margins.takeaway.marginPercent)}`}>
+                          {p.margins.takeaway.marginPercent.toFixed(0)}%
                         </td>
                         <td>
                           <div className="flex justify-end gap-3 whitespace-nowrap text-sm">

@@ -46,14 +46,22 @@ function moveById<T extends { id: string }>(list: T[], fromId: string, toId: str
   return copy;
 }
 
+function marginColorClass(percent: number): string {
+  if (percent >= 60) return "text-green-600";
+  if (percent >= 40) return "text-orange-500";
+  return "text-red-600";
+}
+
 type SortKey =
   | "custom"
   | "name"
   | "costOnSite"
   | "costTakeaway"
   | "priceOnSite"
+  | "onSiteMarginEuros"
   | "onSitePercent"
   | "priceTakeaway"
+  | "takeawayMarginEuros"
   | "takeawayPercent";
 
 export function MenusClient() {
@@ -202,8 +210,10 @@ export function MenusClient() {
       if (sortKey === "costOnSite") cmp = a.margins.onSite.cost - b.margins.onSite.cost;
       if (sortKey === "costTakeaway") cmp = a.margins.takeaway.cost - b.margins.takeaway.cost;
       if (sortKey === "priceOnSite") cmp = a.priceOnSite - b.priceOnSite;
+      if (sortKey === "onSiteMarginEuros") cmp = a.margins.onSite.marginEuros - b.margins.onSite.marginEuros;
       if (sortKey === "onSitePercent") cmp = a.margins.onSite.marginPercent - b.margins.onSite.marginPercent;
       if (sortKey === "priceTakeaway") cmp = a.priceTakeaway - b.priceTakeaway;
+      if (sortKey === "takeawayMarginEuros") cmp = a.margins.takeaway.marginEuros - b.margins.takeaway.marginEuros;
       if (sortKey === "takeawayPercent") cmp = a.margins.takeaway.marginPercent - b.margins.takeaway.marginPercent;
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -288,14 +298,20 @@ export function MenusClient() {
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("priceOnSite")}>
                   Prix sur place (TTC){sortArrow("priceOnSite")}
                 </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("onSiteMarginEuros")}>
+                  Marge sur place (€){sortArrow("onSiteMarginEuros")}
+                </th>
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("onSitePercent")}>
-                  Marge sur place{sortArrow("onSitePercent")}
+                  % sur place{sortArrow("onSitePercent")}
                 </th>
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("priceTakeaway")}>
                   Prix à emporter (TTC){sortArrow("priceTakeaway")}
                 </th>
+                <th className="cursor-pointer select-none" onClick={() => toggleSort("takeawayMarginEuros")}>
+                  Marge à emporter (€){sortArrow("takeawayMarginEuros")}
+                </th>
                 <th className="cursor-pointer select-none" onClick={() => toggleSort("takeawayPercent")}>
-                  Marge à emporter{sortArrow("takeawayPercent")}
+                  % à emporter{sortArrow("takeawayPercent")}
                 </th>
                 <th></th>
               </tr>
@@ -320,12 +336,14 @@ export function MenusClient() {
                   <td>{m.margins.onSite.cost.toFixed(2)} €</td>
                   <td>{m.margins.takeaway.cost.toFixed(2)} €</td>
                   <td>{m.priceOnSite.toFixed(2)} €</td>
-                  <td className={m.margins.onSite.marginPercent < 0 ? "text-red-600" : ""}>
-                    {m.margins.onSite.marginEuros.toFixed(2)} € ({m.margins.onSite.marginPercent.toFixed(0)}%)
+                  <td>{m.margins.onSite.marginEuros.toFixed(2)} €</td>
+                  <td className={`font-semibold ${marginColorClass(m.margins.onSite.marginPercent)}`}>
+                    {m.margins.onSite.marginPercent.toFixed(0)}%
                   </td>
                   <td>{m.priceTakeaway.toFixed(2)} €</td>
-                  <td className={m.margins.takeaway.marginPercent < 0 ? "text-red-600" : ""}>
-                    {m.margins.takeaway.marginEuros.toFixed(2)} € ({m.margins.takeaway.marginPercent.toFixed(0)}%)
+                  <td>{m.margins.takeaway.marginEuros.toFixed(2)} €</td>
+                  <td className={`font-semibold ${marginColorClass(m.margins.takeaway.marginPercent)}`}>
+                    {m.margins.takeaway.marginPercent.toFixed(0)}%
                   </td>
                   <td>
                     <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
@@ -341,7 +359,7 @@ export function MenusClient() {
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-6 text-center text-gray-400">
+                  <td colSpan={11} className="py-6 text-center text-gray-400">
                     Aucun menu
                   </td>
                 </tr>
