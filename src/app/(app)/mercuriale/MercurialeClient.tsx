@@ -11,6 +11,8 @@ type SupplierItem = {
   orderQuantity: number;
   unitPriceHT: number | null;
   casePriceHT: number | null;
+  orderedAt: string | null;
+  receivedAt: string | null;
 };
 
 type Supplier = {
@@ -60,7 +62,20 @@ const emptyItemForm = {
   casePriceHT: "",
 };
 
-type ItemSortKey = "custom" | "reference" | "designation" | "packaging" | "orderQuantity" | "unitPriceHT" | "casePriceHT";
+type ItemSortKey =
+  | "custom"
+  | "reference"
+  | "designation"
+  | "packaging"
+  | "orderQuantity"
+  | "unitPriceHT"
+  | "casePriceHT"
+  | "orderedAt"
+  | "receivedAt";
+
+function toDateInputValue(iso: string | null): string {
+  return iso ? iso.slice(0, 10) : "";
+}
 
 export function MercurialeClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -119,6 +134,8 @@ export function MercurialeClient() {
       if (sortKey === "orderQuantity") cmp = a.orderQuantity - b.orderQuantity;
       if (sortKey === "unitPriceHT") cmp = (a.unitPriceHT ?? 0) - (b.unitPriceHT ?? 0);
       if (sortKey === "casePriceHT") cmp = (a.casePriceHT ?? 0) - (b.casePriceHT ?? 0);
+      if (sortKey === "orderedAt") cmp = (a.orderedAt ?? "").localeCompare(b.orderedAt ?? "");
+      if (sortKey === "receivedAt") cmp = (a.receivedAt ?? "").localeCompare(b.receivedAt ?? "");
       return sortDir === "asc" ? cmp : -cmp;
     });
     return sorted;
@@ -316,6 +333,33 @@ export function MercurialeClient() {
         orderQuantity,
         unitPriceHT: i.unitPriceHT,
         casePriceHT: i.casePriceHT,
+        orderedAt: i.orderedAt,
+        receivedAt: i.receivedAt,
+      }),
+    });
+  }
+
+  async function handleDateChange(i: SupplierItem, field: "orderedAt" | "receivedAt", value: string) {
+    const dateValue = value || null;
+    setSuppliers((prev) =>
+      prev.map((s) =>
+        s.id !== selectedId
+          ? s
+          : { ...s, items: s.items.map((it) => (it.id === i.id ? { ...it, [field]: dateValue } : it)) }
+      )
+    );
+    await fetch(`/api/supplier-items/${i.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reference: i.reference,
+        designation: i.designation,
+        packaging: i.packaging,
+        orderQuantity: i.orderQuantity,
+        unitPriceHT: i.unitPriceHT,
+        casePriceHT: i.casePriceHT,
+        orderedAt: field === "orderedAt" ? dateValue : i.orderedAt,
+        receivedAt: field === "receivedAt" ? dateValue : i.receivedAt,
       }),
     });
   }
@@ -500,6 +544,12 @@ export function MercurialeClient() {
                   <th className="cursor-pointer select-none" onClick={() => toggleSort("casePriceHT")}>
                     Prix carton/colis HT{sortArrow("casePriceHT")}
                   </th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("orderedAt")}>
+                    📦 Commandé le{sortArrow("orderedAt")}
+                  </th>
+                  <th className="cursor-pointer select-none" onClick={() => toggleSort("receivedAt")}>
+                    ✅ Reçu le{sortArrow("receivedAt")}
+                  </th>
                   <th></th>
                 </tr>
               </thead>
@@ -544,6 +594,22 @@ export function MercurialeClient() {
                     <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
                     <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
                     <td>
+                      <input
+                        type="date"
+                        value={toDateInputValue(i.orderedAt)}
+                        onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
+                        className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="date"
+                        value={toDateInputValue(i.receivedAt)}
+                        onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
+                        className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
+                      />
+                    </td>
+                    <td>
                       <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
                         <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
                           ✏️
@@ -557,7 +623,7 @@ export function MercurialeClient() {
                 ))}
                 {displayedItems.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-gray-400">
+                    <td colSpan={10} className="py-6 text-center text-gray-400">
                       Aucun article
                     </td>
                   </tr>

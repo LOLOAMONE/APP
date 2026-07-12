@@ -144,6 +144,8 @@ model SupplierItem {
   orderQuantity Float    @default(0) // quantité à commander
   unitPriceHT   Float?
   casePriceHT   Float?   // prix carton / colis / lot HT
+  orderedAt     DateTime? // date à laquelle l'article a été commandé (vide = pas encore commandé)
+  receivedAt    DateTime? // date à laquelle l'article a été reçu (vide = pas encore reçu)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }

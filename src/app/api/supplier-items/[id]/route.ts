@@ -11,13 +11,22 @@ const itemSchema = z.object({
   orderQuantity: z.number().nonnegative().default(0),
   unitPriceHT: z.number().nonnegative().optional().nullable(),
   casePriceHT: z.number().nonnegative().optional().nullable(),
+  orderedAt: z.string().optional().nullable(),
+  receivedAt: z.string().optional().nullable(),
 });
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
     await requireMercurialeAccess();
     const data = itemSchema.parse(await req.json());
-    const item = await prisma.supplierItem.update({ where: { id: params.id }, data });
+    const item = await prisma.supplierItem.update({
+      where: { id: params.id },
+      data: {
+        ...data,
+        orderedAt: data.orderedAt ? new Date(data.orderedAt) : null,
+        receivedAt: data.receivedAt ? new Date(data.receivedAt) : null,
+      },
+    });
     return NextResponse.json(item);
   }
 );
