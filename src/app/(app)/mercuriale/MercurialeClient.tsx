@@ -88,6 +88,10 @@ function toDateInputValue(iso: string | null): string {
   return iso ? iso.slice(0, 10) : "";
 }
 
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 const CATEGORY_FALLBACK = "Sans catégorie";
 
 export function MercurialeClient() {
@@ -735,20 +739,40 @@ export function MercurialeClient() {
                           <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
                           <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
                           <td>
-                            <input
-                              type="date"
-                              value={toDateInputValue(i.orderedAt)}
-                              onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
-                              className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
-                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={!!i.orderedAt}
+                                onChange={(e) => handleDateChange(i, "orderedAt", e.target.checked ? todayISO() : "")}
+                                title="Commandé"
+                                aria-label="Commandé"
+                                className="h-4 w-4"
+                              />
+                              <input
+                                type="date"
+                                value={toDateInputValue(i.orderedAt)}
+                                onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
+                                className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
+                              />
+                            </div>
                           </td>
                           <td>
-                            <input
-                              type="date"
-                              value={toDateInputValue(i.receivedAt)}
-                              onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
-                              className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
-                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={!!i.receivedAt}
+                                onChange={(e) => handleDateChange(i, "receivedAt", e.target.checked ? todayISO() : "")}
+                                title="Reçu"
+                                aria-label="Reçu"
+                                className="h-4 w-4"
+                              />
+                              <input
+                                type="date"
+                                value={toDateInputValue(i.receivedAt)}
+                                onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
+                                className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
+                              />
+                            </div>
                           </td>
                           <td>
                             <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
