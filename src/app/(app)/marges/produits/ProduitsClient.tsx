@@ -454,7 +454,7 @@ export function ProduitsClient() {
       )}
 
       {showForm && (
-        <Modal title={editing ? "Modifier le produit" : "Nouveau produit"} onClose={() => setShowForm(false)}>
+        <Modal title={editing ? "Modifier le produit" : "Nouveau produit"} onClose={() => setShowForm(false)} wide>
           {ingredients.length === 0 ? (
             <p className="text-sm text-gray-500">
               Ajoutez d&apos;abord des ingrédients avant de créer un produit.
@@ -517,58 +517,71 @@ export function ProduitsClient() {
                     const ing = ingredients.find((i) => i.id === line.ingredientId);
                     const allowedUnits = ing ? allowedQuantityUnitsFor(ing.unit as IngredientUnit) : [];
                     return (
-                      <div key={index} className="flex flex-wrap items-center gap-2 rounded-md border border-gray-100 p-2">
-                        <select
-                          value={line.ingredientId}
-                          onChange={(e) => setLineIngredient(index, e.target.value)}
-                          className="flex-1"
-                        >
-                          {ingredients.map((i) => (
-                            <option key={i.id} value={i.id}>
-                              {i.name}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="Qté"
-                          value={line.quantity}
-                          onChange={(e) => updateLine(index, { quantity: e.target.value })}
-                          className="w-20"
-                          required
-                        />
-                        <select
-                          value={line.quantityUnit}
-                          onChange={(e) => updateLine(index, { quantityUnit: e.target.value as RecipeQuantityUnit })}
-                          className="w-24"
-                        >
-                          {allowedUnits.map((u) => (
-                            <option key={u} value={u}>
-                              {UNIT_LABELS[u]}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={line.channel}
-                          onChange={(e) => updateLine(index, { channel: e.target.value as Channel })}
-                          className="w-44"
-                        >
-                          {(Object.entries(CHANNEL_LABELS) as [Channel, string][]).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => removeLine(index)}
-                          className="text-gray-400 hover:text-red-600"
-                          aria-label="Retirer"
-                        >
-                          ✕
-                        </button>
+                      <div key={index} className="rounded-lg border border-gray-200 p-3">
+                        <div className="mb-3 flex items-center gap-2">
+                          <select
+                            value={line.ingredientId}
+                            onChange={(e) => setLineIngredient(index, e.target.value)}
+                            className="flex-1"
+                          >
+                            {ingredients.map((i) => (
+                              <option key={i.id} value={i.id}>
+                                {i.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => removeLine(index)}
+                            className="shrink-0 text-gray-400 hover:text-red-600"
+                            aria-label="Retirer"
+                            title="Retirer"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="mb-1 block text-xs text-gray-500">Quantité</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={line.quantity}
+                              onChange={(e) => updateLine(index, { quantity: e.target.value })}
+                              className="w-full"
+                              required
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs text-gray-500">Unité</label>
+                            <select
+                              value={line.quantityUnit}
+                              onChange={(e) => updateLine(index, { quantityUnit: e.target.value as RecipeQuantityUnit })}
+                              className="w-full"
+                            >
+                              {allowedUnits.map((u) => (
+                                <option key={u} value={u}>
+                                  {UNIT_LABELS[u] ?? u}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs text-gray-500">Canal</label>
+                            <select
+                              value={line.channel}
+                              onChange={(e) => updateLine(index, { channel: e.target.value as Channel })}
+                              className="w-full"
+                            >
+                              {(Object.entries(CHANNEL_LABELS) as [Channel, string][]).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
