@@ -6,6 +6,7 @@ import { Modal } from "@/components/Modal";
 
 type SupplierItem = {
   id: string;
+  supplierId: string;
   reference: string | null;
   designation: string;
   category: string | null;
@@ -44,6 +45,7 @@ const emptySupplierForm = {
 };
 
 const SUPPLIER_CATEGORY_FALLBACK = "Sans catégorie";
+const CATEGORY_FALLBACK = "Sans catégorie";
 
 function pendingCount(s: Supplier): number {
   return s.items.filter((i) => i.orderedAt && !i.receivedAt).length;
@@ -92,13 +94,12 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-const CATEGORY_FALLBACK = "Sans catégorie";
-
 export function MercurialeClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [units, setUnits] = useState<PackagingUnitRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<ItemSortKey>("custom");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -110,6 +111,7 @@ export function MercurialeClient() {
 
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingItem, setEditingItem] = useState<SupplierItem | null>(null);
+  const [itemFormSupplierId, setItemFormSupplierId] = useState<string | null>(null);
   const [itemForm, setItemForm] = useState(emptyItemForm);
 
   const [showUnitsModal, setShowUnitsModal] = useState(false);
@@ -125,6 +127,11 @@ export function MercurialeClient() {
       const data: Supplier[] = await supRes.json();
       setSuppliers(data);
       setSelectedId((prev) => (prev && data.some((s) => s.id === prev) ? prev : data[0]?.id ?? null));
+      const hasReal = data.some((s) => s.category);
+      if (hasReal) {
+        const cats = Array.from(new Set(data.map((s) => s.category || SUPPLIER_CATEGORY_FALLBACK)));
+        setSelectedCategory((prev) => (prev && cats.includes(prev) ? prev : data.find((s) => s.category)?.category ?? cats[0]));
+      }
     }
     if (unitRes.ok) setUnits(await unitRes.json());
     setLoading(false);
@@ -135,52 +142,7 @@ export function MercurialeClient() {
   }, []);
 
   const selected = suppliers.find((s) => s.id === selectedId) ?? null;
-
-  const displayedItems = useMemo(() => {
-    if (!selected) return [];
-    const q = search.toLowerCase();
-    const filtered = selected.items.filter(
-      (i) => i.designation.toLowerCase().includes(q) || (i.reference ?? "").toLowerCase().includes(q)
-    );
-    if (sortKey === "custom") return filtered;
-    const sorted = [...filtered].sort((a, b) => {
-      let cmp = 0;
-      if (sortKey === "reference") cmp = (a.reference ?? "").localeCompare(b.reference ?? "");
-      if (sortKey === "designation") cmp = a.designation.localeCompare(b.designation);
-      if (sortKey === "packaging") cmp = (a.packaging ?? "").localeCompare(b.packaging ?? "");
-      if (sortKey === "orderQuantity") cmp = a.orderQuantity - b.orderQuantity;
-      if (sortKey === "unitPriceHT") cmp = (a.unitPriceHT ?? 0) - (b.unitPriceHT ?? 0);
-      if (sortKey === "casePriceHT") cmp = (a.casePriceHT ?? 0) - (b.casePriceHT ?? 0);
-      if (sortKey === "orderedAt") cmp = (a.orderedAt ?? "").localeCompare(b.orderedAt ?? "");
-      if (sortKey === "receivedAt") cmp = (a.receivedAt ?? "").localeCompare(b.receivedAt ?? "");
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-    return sorted;
-  }, [selected, search, sortKey, sortDir]);
-
-  const groupedItems = useMemo(() => {
-    const map = new Map<string, SupplierItem[]>();
-    for (const item of displayedItems) {
-      const cat = item.category || CATEGORY_FALLBACK;
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(item);
-    }
-    const categories = Array.from(map.keys());
-    const hasRealCategory = categories.some((c) => c !== CATEGORY_FALLBACK);
-    if (!hasRealCategory) {
-      return [{ category: null as string | null, items: displayedItems }];
-    }
-    const ordered = [
-      ...categories.filter((c) => c !== CATEGORY_FALLBACK),
-      ...(map.has(CATEGORY_FALLBACK) ? [CATEGORY_FALLBACK] : []),
-    ];
-    return ordered.map((cat) => ({ category: cat as string | null, items: map.get(cat)! }));
-  }, [displayedItems]);
-
-  const categorySuggestions = useMemo(
-    () => Array.from(new Set((selected?.items ?? []).map((i) => i.category).filter((c): c is string => !!c))),
-    [selected]
-  );
+  const categoryMode = suppliers.some((s) => s.category);
 
   const groupedSuppliers = useMemo(() => {
     const map = new Map<string, Supplier[]>();
@@ -201,6 +163,12 @@ export function MercurialeClient() {
     return ordered.map((cat) => ({ category: cat as string | null, suppliers: map.get(cat)! }));
   }, [suppliers]);
 
+  const activeSuppliers = categoryMode
+    ? groupedSuppliers.find((g) => g.category === selectedCategory)?.suppliers ?? []
+    : selected
+    ? [selected]
+    : [];
+
   const supplierCategorySuggestions = useMemo(
     () => Array.from(new Set(suppliers.map((s) => s.category).filter((c): c is string => !!c))),
     [suppliers]
@@ -212,6 +180,51 @@ export function MercurialeClient() {
   );
 
   const dragEnabled = sortKey === "custom" && search === "";
+
+  function getDisplayedItems(supplier: Supplier): SupplierItem[] {
+    const q = search.toLowerCase();
+    const filtered = supplier.items.filter(
+      (i) => i.designation.toLowerCase().includes(q) || (i.reference ?? "").toLowerCase().includes(q)
+    );
+    if (sortKey === "custom") return filtered;
+    const sorted = [...filtered].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "reference") cmp = (a.reference ?? "").localeCompare(b.reference ?? "");
+      if (sortKey === "designation") cmp = a.designation.localeCompare(b.designation);
+      if (sortKey === "packaging") cmp = (a.packaging ?? "").localeCompare(b.packaging ?? "");
+      if (sortKey === "orderQuantity") cmp = a.orderQuantity - b.orderQuantity;
+      if (sortKey === "unitPriceHT") cmp = (a.unitPriceHT ?? 0) - (b.unitPriceHT ?? 0);
+      if (sortKey === "casePriceHT") cmp = (a.casePriceHT ?? 0) - (b.casePriceHT ?? 0);
+      if (sortKey === "orderedAt") cmp = (a.orderedAt ?? "").localeCompare(b.orderedAt ?? "");
+      if (sortKey === "receivedAt") cmp = (a.receivedAt ?? "").localeCompare(b.receivedAt ?? "");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return sorted;
+  }
+
+  function getGroupedItems(supplier: Supplier) {
+    const displayed = getDisplayedItems(supplier);
+    const map = new Map<string, SupplierItem[]>();
+    for (const item of displayed) {
+      const cat = item.category || CATEGORY_FALLBACK;
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(item);
+    }
+    const categories = Array.from(map.keys());
+    const hasRealCategory = categories.some((c) => c !== CATEGORY_FALLBACK);
+    if (!hasRealCategory) {
+      return [{ category: null as string | null, items: displayed }];
+    }
+    const ordered = [
+      ...categories.filter((c) => c !== CATEGORY_FALLBACK),
+      ...(map.has(CATEGORY_FALLBACK) ? [CATEGORY_FALLBACK] : []),
+    ];
+    return ordered.map((cat) => ({ category: cat as string | null, items: map.get(cat)! }));
+  }
+
+  function categorySuggestionsFor(supplier: Supplier | null): string[] {
+    return Array.from(new Set((supplier?.items ?? []).map((i) => i.category).filter((c): c is string => !!c)));
+  }
 
   function toggleSort(key: Exclude<ItemSortKey, "custom">) {
     if (sortKey === key) {
@@ -226,7 +239,10 @@ export function MercurialeClient() {
 
   function openCreateSupplier() {
     setEditingSupplier(null);
-    setSupplierForm(emptySupplierForm);
+    setSupplierForm({
+      ...emptySupplierForm,
+      category: categoryMode && selectedCategory && selectedCategory !== SUPPLIER_CATEGORY_FALLBACK ? selectedCategory : "",
+    });
     setError(null);
     setShowSupplierForm(true);
   }
@@ -277,7 +293,10 @@ export function MercurialeClient() {
       const saved = await res.json();
       setShowSupplierForm(false);
       await loadAll();
-      if (!editingSupplier) setSelectedId(saved.id);
+      if (!editingSupplier) {
+        setSelectedId(saved.id);
+        setSelectedCategory(saved.category || SUPPLIER_CATEGORY_FALLBACK);
+      }
     } finally {
       setSaving(false);
     }
@@ -322,12 +341,13 @@ export function MercurialeClient() {
     });
   }
 
-  async function handleItemDrop(category: string | null, targetId: string) {
-    if (!draggingId || draggingId === targetId || !selected) {
+  async function handleItemDrop(supplier: Supplier, category: string | null, targetId: string) {
+    if (!draggingId || draggingId === targetId) {
       setDraggingId(null);
       return;
     }
-    const group = groupedItems.find((g) => g.category === category);
+    const grouped = getGroupedItems(supplier);
+    const group = grouped.find((g) => g.category === category);
     if (!group) {
       setDraggingId(null);
       return;
@@ -339,23 +359,24 @@ export function MercurialeClient() {
     }
     const matches = (item: SupplierItem) => category === null || (item.category || CATEGORY_FALLBACK) === category;
     const indices: number[] = [];
-    selected.items.forEach((it, idx) => {
+    supplier.items.forEach((it, idx) => {
       if (matches(it)) indices.push(idx);
     });
-    const newItems = [...selected.items];
+    const newItems = [...supplier.items];
     indices.forEach((idx, i) => {
       newItems[idx] = reordered[i];
     });
-    setSuppliers((prev) => prev.map((s) => (s.id === selected.id ? { ...s, items: newItems } : s)));
+    setSuppliers((prev) => prev.map((s) => (s.id === supplier.id ? { ...s, items: newItems } : s)));
     setDraggingId(null);
-    await fetch(`/api/suppliers/${selected.id}/items/reorder`, {
+    await fetch(`/api/suppliers/${supplier.id}/items/reorder`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: reordered.map((i) => i.id) }),
     });
   }
 
-  function openCreateItem() {
+  function openCreateItem(supplierId: string) {
+    setItemFormSupplierId(supplierId);
     setEditingItem(null);
     setItemForm(emptyItemForm);
     setError(null);
@@ -363,6 +384,7 @@ export function MercurialeClient() {
   }
 
   function openEditItem(i: SupplierItem) {
+    setItemFormSupplierId(i.supplierId);
     setEditingItem(i);
     setItemForm({
       reference: i.reference ?? "",
@@ -379,7 +401,7 @@ export function MercurialeClient() {
 
   async function handleItemSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selected) return;
+    if (!itemFormSupplierId) return;
     setSaving(true);
     setError(null);
     const payload = {
@@ -391,7 +413,7 @@ export function MercurialeClient() {
       unitPriceHT: itemForm.unitPriceHT ? parseFloat(itemForm.unitPriceHT) : null,
       casePriceHT: itemForm.casePriceHT ? parseFloat(itemForm.casePriceHT) : null,
     };
-    const url = editingItem ? `/api/supplier-items/${editingItem.id}` : `/api/suppliers/${selected.id}/items`;
+    const url = editingItem ? `/api/supplier-items/${editingItem.id}` : `/api/suppliers/${itemFormSupplierId}/items`;
     const method = editingItem ? "PUT" : "POST";
     try {
       const res = await fetch(url, {
@@ -428,7 +450,7 @@ export function MercurialeClient() {
     const orderQuantity = parseFloat(value) || 0;
     setSuppliers((prev) =>
       prev.map((s) =>
-        s.id !== selectedId
+        s.id !== i.supplierId
           ? s
           : { ...s, items: s.items.map((it) => (it.id === i.id ? { ...it, orderQuantity } : it)) }
       )
@@ -453,7 +475,7 @@ export function MercurialeClient() {
     const dateValue = value || null;
     setSuppliers((prev) =>
       prev.map((s) =>
-        s.id !== selectedId
+        s.id !== i.supplierId
           ? s
           : { ...s, items: s.items.map((it) => (it.id === i.id ? { ...it, [field]: dateValue } : it)) }
       )
@@ -498,6 +520,275 @@ export function MercurialeClient() {
     return <p className="text-sm text-gray-500">Chargement...</p>;
   }
 
+  function renderSupplierPanel(supplier: Supplier, standalone: boolean) {
+    const grouped = getGroupedItems(supplier);
+    const displayed = getDisplayedItems(supplier);
+    const pending = pendingCount(supplier);
+
+    return (
+      <div key={supplier.id} className={standalone ? "" : "mb-10"}>
+        {!standalone && (
+          <div
+            draggable
+            onDragStart={() => setDraggingId(supplier.id)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => handleSupplierDrop(supplier.category || SUPPLIER_CATEGORY_FALLBACK, supplier.id)}
+            onDragEnd={() => setDraggingId(null)}
+            title="Glisser pour réordonner"
+            className={`mb-2 flex cursor-grab select-none items-center gap-2 active:cursor-grabbing ${
+              draggingId === supplier.id ? "opacity-40" : ""
+            }`}
+          >
+            <h2 className="text-lg font-bold text-gray-900">{supplier.name}</h2>
+            {pending > 0 && (
+              <span
+                title={`${pending} article(s) commandé(s) en attente de réception`}
+                className="rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700"
+              >
+                📦{pending}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mb-4 flex flex-col justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-start">
+          <div className="grid gap-x-6 gap-y-1.5 text-sm text-gray-600 sm:grid-cols-2">
+            {supplier.orderSchedule && (
+              <p className="flex items-start gap-2">
+                <span>📅</span>
+                <span>{supplier.orderSchedule}</span>
+              </p>
+            )}
+            {supplier.minimumOrder && (
+              <p className="flex items-start gap-2">
+                <span>📦</span>
+                <span>Franco : {supplier.minimumOrder}</span>
+              </p>
+            )}
+            {supplier.email && (
+              <p className="flex items-start gap-2">
+                <span>📧</span>
+                <span>{supplier.email}</span>
+              </p>
+            )}
+            {supplier.phone && (
+              <p className="flex items-start gap-2">
+                <span>☎️</span>
+                <span>{supplier.phone}</span>
+              </p>
+            )}
+            {supplier.clientCode && (
+              <p className="flex items-start gap-2">
+                <span>🔖</span>
+                <span>Code client : {supplier.clientCode}</span>
+              </p>
+            )}
+            {supplier.notes && (
+              <p className="flex items-start gap-2 sm:col-span-2">
+                <span>📝</span>
+                <span className="whitespace-pre-line">{supplier.notes}</span>
+              </p>
+            )}
+            {!supplier.orderSchedule &&
+              !supplier.minimumOrder &&
+              !supplier.email &&
+              !supplier.phone &&
+              !supplier.clientCode &&
+              !supplier.notes && <p className="text-gray-400">Aucune information renseignée.</p>}
+          </div>
+          <div className="flex shrink-0 gap-3 text-sm">
+            <button onClick={() => openEditSupplier(supplier)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+              ✏️
+            </button>
+            <button onClick={() => handleDeleteSupplier(supplier)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+              🗑️
+            </button>
+          </div>
+        </div>
+
+        {standalone ? (
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <input
+              placeholder="Rechercher un article..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full sm:w-64"
+            />
+            <div className="flex items-center gap-3">
+              {sortKey !== "custom" && (
+                <button
+                  onClick={() => setSortKey("custom")}
+                  className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
+                >
+                  ↺ Ordre personnalisé
+                </button>
+              )}
+              <button
+                onClick={() => openCreateItem(supplier.id)}
+                className="whitespace-nowrap rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+              >
+                + Article
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mb-2 flex justify-end">
+            <button
+              onClick={() => openCreateItem(supplier.id)}
+              className="whitespace-nowrap rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            >
+              + Article
+            </button>
+          </div>
+        )}
+
+        {standalone && !dragEnabled && (
+          <p className="mb-2 text-xs text-gray-400">
+            {search
+              ? "Le glisser-déposer est désactivé pendant une recherche."
+              : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
+          </p>
+        )}
+
+        <div className="space-y-6">
+          {grouped.map(({ category, items }) => (
+            <div key={category ?? "__flat__"}>
+              {category !== null && (
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">{category}</h3>
+              )}
+              <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                <table>
+                  <thead>
+                    <tr>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("reference")}>
+                        Référence{sortArrow("reference")}
+                      </th>
+                      <th>Lien</th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("designation")}>
+                        Désignation{sortArrow("designation")}
+                      </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("packaging")}>
+                        Conditionnement{sortArrow("packaging")}
+                      </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("orderQuantity")}>
+                        Commande{sortArrow("orderQuantity")}
+                      </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("unitPriceHT")}>
+                        Prix U. HT{sortArrow("unitPriceHT")}
+                      </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("casePriceHT")}>
+                        Prix carton/colis HT{sortArrow("casePriceHT")}
+                      </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("orderedAt")}>
+                        📦 Commandé le{sortArrow("orderedAt")}
+                      </th>
+                      <th className="cursor-pointer select-none" onClick={() => toggleSort("receivedAt")}>
+                        ✅ Reçu le{sortArrow("receivedAt")}
+                      </th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((i) => (
+                      <tr
+                        key={i.id}
+                        draggable={dragEnabled}
+                        onDragStart={() => dragEnabled && setDraggingId(i.id)}
+                        onDragOver={(e) => dragEnabled && e.preventDefault()}
+                        onDrop={() => dragEnabled && handleItemDrop(supplier, category, i.id)}
+                        onDragEnd={() => setDraggingId(null)}
+                        className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
+                          draggingId === i.id ? "opacity-40" : ""
+                        }`}
+                      >
+                        <td className="text-gray-500">{isUrl(i.reference) ? "—" : i.reference || "—"}</td>
+                        <td>
+                          {isUrl(i.reference) && (
+                            <a
+                              href={i.reference}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
+                            >
+                              🔗 Voir
+                            </a>
+                          )}
+                        </td>
+                        <td className="max-w-xs whitespace-pre-line font-medium">{i.designation}</td>
+                        <td className="text-gray-500">{i.packaging || "—"}</td>
+                        <td>
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={i.orderQuantity}
+                            onChange={(e) => handleQuantityChange(i, e.target.value)}
+                            className="w-16"
+                          />
+                        </td>
+                        <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
+                        <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={!!i.orderedAt}
+                              onChange={(e) => handleDateChange(i, "orderedAt", e.target.checked ? todayISO() : "")}
+                              title="Commandé"
+                              aria-label="Commandé"
+                              className="h-4 w-4"
+                            />
+                            <input
+                              type="date"
+                              value={toDateInputValue(i.orderedAt)}
+                              onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
+                              className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
+                            />
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={!!i.receivedAt}
+                              onChange={(e) => handleDateChange(i, "receivedAt", e.target.checked ? todayISO() : "")}
+                              title="Reçu"
+                              aria-label="Reçu"
+                              className="h-4 w-4"
+                            />
+                            <input
+                              type="date"
+                              value={toDateInputValue(i.receivedAt)}
+                              onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
+                              className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
+                            />
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
+                            <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                              ✏️
+                            </button>
+                            <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                              🗑️
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+          {displayed.length === 0 && <p className="py-6 text-center text-gray-400">Aucun article</p>}
+        </div>
+      </div>
+    );
+  }
+
+  const itemFormSupplier = suppliers.find((s) => s.id === itemFormSupplierId) ?? null;
+
   return (
     <div>
       <div className="mb-4 flex items-center justify-between">
@@ -529,13 +820,55 @@ export function MercurialeClient() {
         </div>
       </div>
 
-      <div className="mb-6 space-y-2 border-b border-gray-200 pb-4">
-        {groupedSuppliers.map(({ category, suppliers: group }) => (
-          <div key={category ?? "__flat__"} className="flex flex-wrap items-center gap-2">
-            {category !== null && (
-              <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{category}</span>
-            )}
-            {group.map((s) => {
+      {categoryMode ? (
+        <>
+          <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
+            {groupedSuppliers.map(({ category }) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  selectedCategory === category ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          {activeSuppliers.length > 0 && (
+            <>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <input
+                  placeholder="Rechercher un article..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full sm:w-64"
+                />
+                {sortKey !== "custom" && (
+                  <button
+                    onClick={() => setSortKey("custom")}
+                    className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    ↺ Ordre personnalisé
+                  </button>
+                )}
+              </div>
+              {!dragEnabled && (
+                <p className="mb-4 text-xs text-gray-400">
+                  {search
+                    ? "Le glisser-déposer est désactivé pendant une recherche."
+                    : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
+                </p>
+              )}
+              {activeSuppliers.map((s) => renderSupplierPanel(s, false))}
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
+            {suppliers.map((s) => {
               const pending = pendingCount(s);
               return (
                 <button
@@ -543,7 +876,7 @@ export function MercurialeClient() {
                   draggable
                   onDragStart={() => setDraggingId(s.id)}
                   onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleSupplierDrop(category, s.id)}
+                  onDrop={() => handleSupplierDrop(null, s.id)}
                   onDragEnd={() => setDraggingId(null)}
                   onClick={() => setSelectedId(s.id)}
                   title="Glisser pour réordonner"
@@ -563,239 +896,13 @@ export function MercurialeClient() {
                 </button>
               );
             })}
-          </div>
-        ))}
-        {suppliers.length === 0 && (
-          <p className="text-sm text-gray-400">Aucun fournisseur. Ajoutez-en un pour commencer.</p>
-        )}
-      </div>
-
-      {selected && (
-        <div>
-          <div className="mb-4 flex flex-col justify-between gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-start">
-            <div className="grid gap-x-6 gap-y-1.5 text-sm text-gray-600 sm:grid-cols-2">
-              {selected.orderSchedule && (
-                <p className="flex items-start gap-2">
-                  <span>📅</span>
-                  <span>{selected.orderSchedule}</span>
-                </p>
-              )}
-              {selected.minimumOrder && (
-                <p className="flex items-start gap-2">
-                  <span>📦</span>
-                  <span>Franco : {selected.minimumOrder}</span>
-                </p>
-              )}
-              {selected.email && (
-                <p className="flex items-start gap-2">
-                  <span>📧</span>
-                  <span>{selected.email}</span>
-                </p>
-              )}
-              {selected.phone && (
-                <p className="flex items-start gap-2">
-                  <span>☎️</span>
-                  <span>{selected.phone}</span>
-                </p>
-              )}
-              {selected.clientCode && (
-                <p className="flex items-start gap-2">
-                  <span>🔖</span>
-                  <span>Code client : {selected.clientCode}</span>
-                </p>
-              )}
-              {selected.notes && (
-                <p className="flex items-start gap-2 sm:col-span-2">
-                  <span>📝</span>
-                  <span className="whitespace-pre-line">{selected.notes}</span>
-                </p>
-              )}
-              {!selected.orderSchedule &&
-                !selected.minimumOrder &&
-                !selected.email &&
-                !selected.phone &&
-                !selected.clientCode &&
-                !selected.notes && <p className="text-gray-400">Aucune information renseignée.</p>}
-            </div>
-            <div className="flex shrink-0 gap-3 text-sm">
-              <button onClick={() => openEditSupplier(selected)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                ✏️
-              </button>
-              <button onClick={() => handleDeleteSupplier(selected)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                🗑️
-              </button>
-            </div>
-          </div>
-
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <input
-              placeholder="Rechercher un article..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full sm:w-64"
-            />
-            <div className="flex items-center gap-3">
-              {sortKey !== "custom" && (
-                <button
-                  onClick={() => setSortKey("custom")}
-                  className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
-                >
-                  ↺ Ordre personnalisé
-                </button>
-              )}
-              <button
-                onClick={openCreateItem}
-                className="whitespace-nowrap rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-              >
-                + Article
-              </button>
-            </div>
-          </div>
-
-          {!dragEnabled && (
-            <p className="mb-2 text-xs text-gray-400">
-              {search
-                ? "Le glisser-déposer est désactivé pendant une recherche."
-                : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
-            </p>
-          )}
-
-          <div className="space-y-6">
-            {groupedItems.map(({ category, items }) => (
-              <div key={category ?? "__flat__"}>
-                {category !== null && (
-                  <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">{category}</h2>
-                )}
-                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("reference")}>
-                          Référence{sortArrow("reference")}
-                        </th>
-                        <th>Lien</th>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("designation")}>
-                          Désignation{sortArrow("designation")}
-                        </th>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("packaging")}>
-                          Conditionnement{sortArrow("packaging")}
-                        </th>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("orderQuantity")}>
-                          Commande{sortArrow("orderQuantity")}
-                        </th>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("unitPriceHT")}>
-                          Prix U. HT{sortArrow("unitPriceHT")}
-                        </th>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("casePriceHT")}>
-                          Prix carton/colis HT{sortArrow("casePriceHT")}
-                        </th>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("orderedAt")}>
-                          📦 Commandé le{sortArrow("orderedAt")}
-                        </th>
-                        <th className="cursor-pointer select-none" onClick={() => toggleSort("receivedAt")}>
-                          ✅ Reçu le{sortArrow("receivedAt")}
-                        </th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((i) => (
-                        <tr
-                          key={i.id}
-                          draggable={dragEnabled}
-                          onDragStart={() => dragEnabled && setDraggingId(i.id)}
-                          onDragOver={(e) => dragEnabled && e.preventDefault()}
-                          onDrop={() => dragEnabled && handleItemDrop(category, i.id)}
-                          onDragEnd={() => setDraggingId(null)}
-                          className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
-                            draggingId === i.id ? "opacity-40" : ""
-                          }`}
-                        >
-                          <td className="text-gray-500">{isUrl(i.reference) ? "—" : i.reference || "—"}</td>
-                          <td>
-                            {isUrl(i.reference) && (
-                              <a
-                                href={i.reference}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
-                              >
-                                🔗 Voir
-                              </a>
-                            )}
-                          </td>
-                          <td className="max-w-xs whitespace-pre-line font-medium">{i.designation}</td>
-                          <td className="text-gray-500">{i.packaging || "—"}</td>
-                          <td>
-                            <input
-                              type="number"
-                              step="1"
-                              min="0"
-                              value={i.orderQuantity}
-                              onChange={(e) => handleQuantityChange(i, e.target.value)}
-                              className="w-16"
-                            />
-                          </td>
-                          <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
-                          <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
-                          <td>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={!!i.orderedAt}
-                                onChange={(e) => handleDateChange(i, "orderedAt", e.target.checked ? todayISO() : "")}
-                                title="Commandé"
-                                aria-label="Commandé"
-                                className="h-4 w-4"
-                              />
-                              <input
-                                type="date"
-                                value={toDateInputValue(i.orderedAt)}
-                                onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
-                                className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
-                              />
-                            </div>
-                          </td>
-                          <td>
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={!!i.receivedAt}
-                                onChange={(e) => handleDateChange(i, "receivedAt", e.target.checked ? todayISO() : "")}
-                                title="Reçu"
-                                aria-label="Reçu"
-                                className="h-4 w-4"
-                              />
-                              <input
-                                type="date"
-                                value={toDateInputValue(i.receivedAt)}
-                                onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
-                                className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
-                              />
-                            </div>
-                          </td>
-                          <td>
-                            <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                              <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                                ✏️
-                              </button>
-                              <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                                🗑️
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
-            {displayedItems.length === 0 && (
-              <p className="py-6 text-center text-gray-400">Aucun article</p>
+            {suppliers.length === 0 && (
+              <p className="text-sm text-gray-400">Aucun fournisseur. Ajoutez-en un pour commencer.</p>
             )}
           </div>
-        </div>
+
+          {selected && renderSupplierPanel(selected, true)}
+        </>
       )}
 
       {showSupplierForm && (
@@ -910,8 +1017,8 @@ export function MercurialeClient() {
         </Modal>
       )}
 
-      {showItemForm && selected && (
-        <Modal title={editingItem ? "Modifier l'article" : `Nouvel article — ${selected.name}`} onClose={() => setShowItemForm(false)}>
+      {showItemForm && itemFormSupplier && (
+        <Modal title={editingItem ? "Modifier l'article" : `Nouvel article — ${itemFormSupplier.name}`} onClose={() => setShowItemForm(false)}>
           <form onSubmit={handleItemSubmit} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Désignation</label>
@@ -941,7 +1048,7 @@ export function MercurialeClient() {
                   className="w-full"
                 />
                 <datalist id="category-suggestions">
-                  {categorySuggestions.map((c) => (
+                  {categorySuggestionsFor(itemFormSupplier).map((c) => (
                     <option key={c} value={c} />
                   ))}
                 </datalist>
