@@ -100,6 +100,8 @@ export function MercurialeClient() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [editingCategoryTab, setEditingCategoryTab] = useState<string | null>(null);
+  const [editingCategoryLabel, setEditingCategoryLabel] = useState("");
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<ItemSortKey>("custom");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -339,6 +341,45 @@ export function MercurialeClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: reordered.map((s) => s.id) }),
     });
+  }
+
+  function startEditCategoryTab(category: string) {
+    setEditingCategoryTab(category);
+    setEditingCategoryLabel(category);
+  }
+
+  async function saveEditCategoryTab(oldName: string) {
+    const newName = editingCategoryLabel.trim();
+    if (!newName || newName === oldName) {
+      setEditingCategoryTab(null);
+      return;
+    }
+    const group = groupedSuppliers.find((g) => g.category === oldName);
+    if (!group) {
+      setEditingCategoryTab(null);
+      return;
+    }
+    await Promise.all(
+      group.suppliers.map((s) =>
+        fetch(`/api/suppliers/${s.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: s.name,
+            category: newName,
+            orderSchedule: s.orderSchedule,
+            minimumOrder: s.minimumOrder,
+            email: s.email,
+            phone: s.phone,
+            clientCode: s.clientCode,
+            notes: s.notes,
+          }),
+        })
+      )
+    );
+    setEditingCategoryTab(null);
+    if (selectedCategory === oldName) setSelectedCategory(newName);
+    await loadAll();
   }
 
   async function handleItemDrop(supplier: Supplier, category: string | null, targetId: string) {
@@ -822,18 +863,51 @@ export function MercurialeClient() {
 
       {categoryMode ? (
         <>
-          <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-4">
-            {groupedSuppliers.map(({ category }) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
-                  selectedCategory === category ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+          <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-gray-200 pb-4">
+            {groupedSuppliers.map(({ category }) => {
+              const isRenamable = category !== null && category !== SUPPLIER_CATEGORY_FALLBACK;
+              if (editingCategoryTab === category && category !== null) {
+                return (
+                  <span key={category} className="inline-flex items-center gap-1">
+                    <input
+                      autoFocus
+                      value={editingCategoryLabel}
+                      onChange={(e) => setEditingCategoryLabel(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && saveEditCategoryTab(category)}
+                      className="w-32 text-sm"
+                    />
+                    <button onClick={() => saveEditCategoryTab(category)} title="Enregistrer" aria-label="Enregistrer" className="text-green-600 hover:text-green-800">
+                      ✓
+                    </button>
+                    <button onClick={() => setEditingCategoryTab(null)} title="Annuler" aria-label="Annuler" className="text-gray-400 hover:text-gray-600">
+                      ✕
+                    </button>
+                  </span>
+                );
+              }
+              return (
+                <span key={category} className="inline-flex items-center">
+                  <button
+                    onClick={() => setSelectedCategory(category)}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                      selectedCategory === category ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                  {isRenamable && (
+                    <button
+                      onClick={() => startEditCategoryTab(category)}
+                      title="Renommer la catégorie"
+                      aria-label="Renommer la catégorie"
+                      className="ml-0.5 text-gray-300 hover:text-brand-600"
+                    >
+                      ✏️
+                    </button>
+                  )}
+                </span>
+              );
+            })}
           </div>
 
           {activeSuppliers.length > 0 && (

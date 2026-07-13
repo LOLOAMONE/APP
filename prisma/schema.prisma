@@ -53,6 +53,7 @@ model Ingredient {
   unit          String                 // "kg" | "L" | "piece" | unité personnalisée (voir MeasureUnit)
   price         Float                  // prix d'achat actuel, dans l'unité ci-dessus
   supplier      String?
+  category      String?                // sous-catégorie libre (ex: "Viandes", "Emballages")
   order         Int                    @default(0) // ordre d'affichage, modifiable par glisser-déposer
   priceHistory  IngredientPriceHistory[]
   productLinks  ProductIngredient[]

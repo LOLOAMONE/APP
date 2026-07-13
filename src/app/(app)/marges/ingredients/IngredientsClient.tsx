@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/Modal";
 import { INGREDIENT_UNITS, IngredientUnit } from "@/lib/margins";
 
@@ -10,6 +10,7 @@ type Ingredient = {
   unit: string;
   price: number;
   supplier: string | null;
+  category: string | null;
 };
 
 type PriceEntry = { id: string; price: number; recordedAt: string };
@@ -18,7 +19,9 @@ type MeasureUnitRow = { id: string; label: string };
 
 const UNIT_LABELS: Record<string, string> = { kg: "kg", L: "L", piece: "pièce" };
 
-const emptyForm = { name: "", unit: "kg" as IngredientUnit, price: "", supplier: "" };
+const emptyForm = { name: "", unit: "kg" as IngredientUnit, price: "", supplier: "", category: "" };
+
+const CATEGORY_FALLBACK = "Sans catégorie";
 
 function moveById<T extends { id: string }>(list: T[], fromId: string, toId: string): T[] {
   const fromIndex = list.findIndex((x) => x.id === fromId);
@@ -49,6 +52,8 @@ export function IngredientsClient() {
   const [history, setHistory] = useState<PriceEntry[]>([]);
   const [showUnitsModal, setShowUnitsModal] = useState(false);
   const [newUnitLabel, setNewUnitLabel] = useState("");
+  const [editingUnitId, setEditingUnitId] = useState<string | null>(null);
+  const [editingUnitLabel, setEditingUnitLabel] = useState("");
 
   async function loadAll() {
     setLoading(true);
@@ -64,6 +69,11 @@ export function IngredientsClient() {
 
   const unitOptions = [...INGREDIENT_UNITS, ...units.map((u) => u.label).filter((l) => !INGREDIENT_UNITS.includes(l as (typeof INGREDIENT_UNITS)[number]))];
 
+  const categorySuggestions = useMemo(
+    () => Array.from(new Set(ingredients.map((i) => i.category).filter((c): c is string => !!c))),
+    [ingredients]
+  );
+
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
@@ -78,6 +88,7 @@ export function IngredientsClient() {
       unit: ing.unit as IngredientUnit,
       price: String(ing.price),
       supplier: ing.supplier ?? "",
+      category: ing.category ?? "",
     });
     setError(null);
     setShowForm(true);
@@ -93,6 +104,7 @@ export function IngredientsClient() {
       unit: form.unit,
       price: parseFloat(form.price),
       supplier: form.supplier || null,
+      category: form.category || null,
     };
 
     const url = editing ? `/api/ingredients/${editing.id}` : "/api/ingredients";
@@ -144,28 +156,65 @@ export function IngredientsClient() {
 
   const sortArrow = (key: SortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
 
-  const filtered = ingredients.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
-  const displayed =
-    sortKey === "custom"
-      ? filtered
-      : [...filtered].sort((a, b) => {
-          let cmp = 0;
-          if (sortKey === "name") cmp = a.name.localeCompare(b.name);
-          if (sortKey === "unit") cmp = a.unit.localeCompare(b.unit);
-          if (sortKey === "price") cmp = a.price - b.price;
-          if (sortKey === "supplier") cmp = (a.supplier ?? "").localeCompare(b.supplier ?? "");
-          return sortDir === "asc" ? cmp : -cmp;
-        });
+  const displayed = useMemo(() => {
+    const filtered = ingredients.filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
+    if (sortKey === "custom") return filtered;
+    return [...filtered].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "name") cmp = a.name.localeCompare(b.name);
+      if (sortKey === "unit") cmp = a.unit.localeCompare(b.unit);
+      if (sortKey === "price") cmp = a.price - b.price;
+      if (sortKey === "supplier") cmp = (a.supplier ?? "").localeCompare(b.supplier ?? "");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [ingredients, search, sortKey, sortDir]);
+
+  const groupedIngredients = useMemo(() => {
+    const map = new Map<string, Ingredient[]>();
+    for (const ing of displayed) {
+      const cat = ing.category || CATEGORY_FALLBACK;
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(ing);
+    }
+    const categories = Array.from(map.keys());
+    const hasRealCategory = categories.some((c) => c !== CATEGORY_FALLBACK);
+    if (!hasRealCategory) {
+      return [{ category: null as string | null, items: displayed }];
+    }
+    const ordered = [
+      ...categories.filter((c) => c !== CATEGORY_FALLBACK),
+      ...(map.has(CATEGORY_FALLBACK) ? [CATEGORY_FALLBACK] : []),
+    ];
+    return ordered.map((cat) => ({ category: cat as string | null, items: map.get(cat)! }));
+  }, [displayed]);
 
   const dragEnabled = sortKey === "custom" && search === "";
 
-  async function handleDrop(targetId: string) {
+  async function handleDrop(category: string | null, targetId: string) {
     if (!draggingId || draggingId === targetId) {
       setDraggingId(null);
       return;
     }
-    const reordered = moveById(ingredients, draggingId, targetId);
-    setIngredients(reordered);
+    const group = groupedIngredients.find((g) => g.category === category);
+    if (!group) {
+      setDraggingId(null);
+      return;
+    }
+    const reordered = moveById(group.items, draggingId, targetId);
+    if (reordered === group.items) {
+      setDraggingId(null);
+      return;
+    }
+    const matches = (ing: Ingredient) => category === null || (ing.category || CATEGORY_FALLBACK) === category;
+    const indices: number[] = [];
+    ingredients.forEach((ing, idx) => {
+      if (matches(ing)) indices.push(idx);
+    });
+    const newIngredients = [...ingredients];
+    indices.forEach((idx, i) => {
+      newIngredients[idx] = reordered[i];
+    });
+    setIngredients(newIngredients);
     setDraggingId(null);
     await fetch("/api/ingredients/reorder", {
       method: "PUT",
@@ -192,6 +241,26 @@ export function IngredientsClient() {
   async function handleDeleteUnit(id: string) {
     const res = await fetch(`/api/measure-units/${id}`, { method: "DELETE" });
     if (res.ok) setUnits((prev) => prev.filter((u) => u.id !== id));
+  }
+
+  function startEditUnit(u: MeasureUnitRow) {
+    setEditingUnitId(u.id);
+    setEditingUnitLabel(u.label);
+  }
+
+  async function saveEditUnit(id: string) {
+    const label = editingUnitLabel.trim();
+    if (!label) return;
+    const res = await fetch(`/api/measure-units/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label }),
+    });
+    if (res.ok) {
+      setEditingUnitId(null);
+      const unitRes = await fetch("/api/measure-units");
+      if (unitRes.ok) setUnits(await unitRes.json());
+    }
   }
 
   return (
@@ -241,66 +310,71 @@ export function IngredientsClient() {
                 : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
             </p>
           )}
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-            <table>
-              <thead>
-                <tr>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
-                    Nom{sortArrow("name")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("unit")}>
-                    Unité{sortArrow("unit")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("price")}>
-                    Prix d&apos;achat{sortArrow("price")}
-                  </th>
-                  <th className="cursor-pointer select-none" onClick={() => toggleSort("supplier")}>
-                    Fournisseur{sortArrow("supplier")}
-                  </th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayed.map((ing) => (
-                  <tr
-                    key={ing.id}
-                    draggable={dragEnabled}
-                    onDragStart={() => dragEnabled && setDraggingId(ing.id)}
-                    onDragOver={(e) => dragEnabled && e.preventDefault()}
-                    onDrop={() => dragEnabled && handleDrop(ing.id)}
-                    onDragEnd={() => setDraggingId(null)}
-                    className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
-                      draggingId === ing.id ? "opacity-40" : ""
-                    }`}
-                  >
-                    <td className="font-medium">{ing.name}</td>
-                    <td>{UNIT_LABELS[ing.unit] ?? ing.unit}</td>
-                    <td>{ing.price.toFixed(2)} € / {UNIT_LABELS[ing.unit] ?? ing.unit}</td>
-                    <td>{ing.supplier || "—"}</td>
-                    <td>
-                      <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                        <button onClick={() => openHistory(ing)} title="Historique" aria-label="Historique" className="text-gray-500 hover:text-gray-700">
-                          🕒
-                        </button>
-                        <button onClick={() => openEdit(ing)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                          ✏️
-                        </button>
-                        <button onClick={() => handleDelete(ing)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                          🗑️
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {displayed.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-6 text-center text-gray-400">
-                      Aucun ingrédient
-                    </td>
-                  </tr>
+          <div className="space-y-6">
+            {groupedIngredients.map(({ category, items }) => (
+              <div key={category ?? "__flat__"}>
+                {category !== null && (
+                  <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">{category}</h2>
                 )}
-              </tbody>
-            </table>
+                <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                          Nom{sortArrow("name")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("unit")}>
+                          Unité{sortArrow("unit")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("price")}>
+                          Prix d&apos;achat{sortArrow("price")}
+                        </th>
+                        <th className="cursor-pointer select-none" onClick={() => toggleSort("supplier")}>
+                          Fournisseur{sortArrow("supplier")}
+                        </th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((ing) => (
+                        <tr
+                          key={ing.id}
+                          draggable={dragEnabled}
+                          onDragStart={() => dragEnabled && setDraggingId(ing.id)}
+                          onDragOver={(e) => dragEnabled && e.preventDefault()}
+                          onDrop={() => dragEnabled && handleDrop(category, ing.id)}
+                          onDragEnd={() => setDraggingId(null)}
+                          className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
+                            draggingId === ing.id ? "opacity-40" : ""
+                          }`}
+                        >
+                          <td className="font-medium">{ing.name}</td>
+                          <td>{UNIT_LABELS[ing.unit] ?? ing.unit}</td>
+                          <td>{ing.price.toFixed(2)} € / {UNIT_LABELS[ing.unit] ?? ing.unit}</td>
+                          <td>{ing.supplier || "—"}</td>
+                          <td>
+                            <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
+                              <button onClick={() => openHistory(ing)} title="Historique" aria-label="Historique" className="text-gray-500 hover:text-gray-700">
+                                🕒
+                              </button>
+                              <button onClick={() => openEdit(ing)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                                ✏️
+                              </button>
+                              <button onClick={() => handleDelete(ing)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                                🗑️
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+            {displayed.length === 0 && (
+              <p className="py-6 text-center text-gray-400">Aucun ingrédient</p>
+            )}
           </div>
         </div>
       )}
@@ -345,15 +419,32 @@ export function IngredientsClient() {
                 />
               </div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Fournisseur (optionnel)
-              </label>
-              <input
-                value={form.supplier}
-                onChange={(e) => setForm({ ...form, supplier: e.target.value })}
-                className="w-full"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Fournisseur (optionnel)
+                </label>
+                <input
+                  value={form.supplier}
+                  onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">Catégorie (optionnel)</label>
+                <input
+                  list="ingredient-category-suggestions"
+                  placeholder="ex : Viandes"
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}
+                  className="w-full"
+                />
+                <datalist id="ingredient-category-suggestions">
+                  {categorySuggestions.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
@@ -415,11 +506,38 @@ export function IngredientsClient() {
           <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200">
             <ul>
               {units.map((u) => (
-                <li key={u.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
-                  {u.label}
-                  <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                    🗑️
-                  </button>
+                <li key={u.id} className="flex items-center justify-between gap-2 border-b border-gray-100 px-3 py-2 text-sm last:border-0">
+                  {editingUnitId === u.id ? (
+                    <>
+                      <input
+                        autoFocus
+                        value={editingUnitLabel}
+                        onChange={(e) => setEditingUnitLabel(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && saveEditUnit(u.id)}
+                        className="flex-1"
+                      />
+                      <div className="flex shrink-0 gap-2">
+                        <button onClick={() => saveEditUnit(u.id)} title="Enregistrer" aria-label="Enregistrer" className="text-green-600 hover:text-green-800">
+                          ✓
+                        </button>
+                        <button onClick={() => setEditingUnitId(null)} title="Annuler" aria-label="Annuler" className="text-gray-400 hover:text-gray-600">
+                          ✕
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1">{u.label}</span>
+                      <div className="flex shrink-0 gap-2">
+                        <button onClick={() => startEditUnit(u)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
+                          ✏️
+                        </button>
+                        <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                          🗑️
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
               {units.length === 0 && <li className="px-3 py-4 text-center text-sm text-gray-400">Aucune unité personnalisée</li>}

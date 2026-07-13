@@ -9,6 +9,7 @@ const ingredientSchema = z.object({
   unit: z.string().min(1),
   price: z.number().nonnegative(),
   supplier: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
 });
 
 export const GET = withErrorHandling(async () => {
