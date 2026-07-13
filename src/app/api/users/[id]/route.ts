@@ -8,6 +8,7 @@ const updateSchema = z.object({
   role: z.enum(["ADMIN", "EMPLOYEE"]),
   canAccessMarges: z.boolean(),
   canAccessMercuriale: z.boolean(),
+  canAccessCrm: z.boolean(),
 });
 
 export const PUT = withErrorHandling(
@@ -28,6 +29,7 @@ export const PUT = withErrorHandling(
         role: data.role,
         canAccessMarges: data.canAccessMarges,
         canAccessMercuriale: data.canAccessMercuriale,
+        canAccessCrm: data.canAccessCrm,
       },
       select: {
         id: true,
@@ -35,6 +37,7 @@ export const PUT = withErrorHandling(
         role: true,
         canAccessMarges: true,
         canAccessMercuriale: true,
+        canAccessCrm: true,
         employee: { select: { id: true, name: true, position: true } },
       },
     });

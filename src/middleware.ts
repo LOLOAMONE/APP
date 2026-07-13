@@ -7,6 +7,7 @@ export const config = {
 
 const MARGES_PATHS = ["/marges", "/api/ingredients", "/api/products", "/api/menus", "/api/measure-units"];
 const MERCURIALE_PATHS = ["/mercuriale", "/api/suppliers", "/api/supplier-items", "/api/packaging-units"];
+const CRM_PATHS = ["/clients", "/api/crm"];
 const USERS_PATHS = ["/api/users"];
 
 export async function middleware(req: NextRequest) {
@@ -43,6 +44,10 @@ export async function middleware(req: NextRequest) {
   }
 
   if (MERCURIALE_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin && !session.canAccessMercuriale) {
+    return deny();
+  }
+
+  if (CRM_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin && !session.canAccessCrm) {
     return deny();
   }
 

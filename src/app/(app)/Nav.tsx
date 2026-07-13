@@ -11,9 +11,10 @@ type NavProps = {
   username: string;
   canAccessMarges: boolean;
   canAccessMercuriale: boolean;
+  canAccessCrm: boolean;
 };
 
-export function Nav({ userId, role, username, canAccessMarges, canAccessMercuriale }: NavProps) {
+export function Nav({ userId, role, username, canAccessMarges, canAccessMercuriale, canAccessCrm }: NavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -23,6 +24,7 @@ export function Nav({ userId, role, username, canAccessMarges, canAccessMercuria
   const TABS = [
     { href: "/marges", label: "Marges", visible: isAdmin || canAccessMarges },
     { href: "/mercuriale", label: "Mercuriale", visible: isAdmin || canAccessMercuriale },
+    { href: "/clients", label: "Clients", visible: isAdmin || canAccessCrm },
     { href: "/planning", label: "Planning", visible: true },
   ];
   const visibleTabs = TABS.filter((tab) => tab.visible);

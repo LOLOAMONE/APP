@@ -10,6 +10,7 @@ const createUserSchema = z.object({
   role: z.enum(["ADMIN", "EMPLOYEE"]),
   canAccessMarges: z.boolean().default(false),
   canAccessMercuriale: z.boolean().default(false),
+  canAccessCrm: z.boolean().default(false),
 });
 
 export const GET = withErrorHandling(async () => {
@@ -22,6 +23,7 @@ export const GET = withErrorHandling(async () => {
       role: true,
       canAccessMarges: true,
       canAccessMercuriale: true,
+      canAccessCrm: true,
       employee: { select: { id: true, name: true, position: true } },
     },
   });
@@ -45,6 +47,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       role: data.role,
       canAccessMarges: data.canAccessMarges,
       canAccessMercuriale: data.canAccessMercuriale,
+      canAccessCrm: data.canAccessCrm,
     },
     select: {
       id: true,
@@ -52,6 +55,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       role: true,
       canAccessMarges: true,
       canAccessMercuriale: true,
+      canAccessCrm: true,
       employee: { select: { id: true, name: true, position: true } },
     },
   });

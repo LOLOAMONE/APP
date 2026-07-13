@@ -7,6 +7,7 @@ export type SessionPayload = {
   employeeId: string | null;
   canAccessMarges: boolean;
   canAccessMercuriale: boolean;
+  canAccessCrm: boolean;
 };
 
 const COOKIE_NAME = "session";

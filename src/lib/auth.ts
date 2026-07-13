@@ -50,3 +50,12 @@ export async function requireMercurialeAccess(): Promise<SessionPayload> {
   }
   return user;
 }
+
+/** Accès à l'onglet Clients (CRM) : la direction, ou un employé à qui cet accès a été accordé. */
+export async function requireCrmAccess(): Promise<SessionPayload> {
+  const user = await requireUser();
+  if (user.role !== "ADMIN" && !user.canAccessCrm) {
+    throw new Error("FORBIDDEN");
+  }
+  return user;
+}

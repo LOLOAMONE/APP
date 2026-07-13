@@ -18,6 +18,7 @@ model User {
   role                String    // "ADMIN" | "EMPLOYEE" — ADMIN a toujours accès à tout
   canAccessMarges     Boolean   @default(false) // ignoré si role = ADMIN
   canAccessMercuriale Boolean   @default(false) // ignoré si role = ADMIN
+  canAccessCrm        Boolean   @default(false) // ignoré si role = ADMIN
   employee            Employee?
   createdAt           DateTime  @default(now())
 }
@@ -178,4 +179,51 @@ model Absence {
   status     String   @default("APPROVED") // "PENDING" | "APPROVED" | "REJECTED"
   note       String?
   createdAt  DateTime @default(now())
+}
+
+// CRM pour les clients entreprises / événements (séminaires, groupes, privatisations) —
+// distinct des clients du quotidien qui ne sont pas suivis nommément.
+model CrmCompany {
+  id            String           @id @default(cuid())
+  name          String
+  sector        String?          // secteur d'activité
+  address       String?
+  phone         String?
+  email         String?
+  notes         String?
+  contacts      CrmContact[]
+  opportunities CrmOpportunity[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model CrmContact {
+  id            String           @id @default(cuid())
+  companyId     String?
+  company       CrmCompany?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name          String
+  role          String?          // fonction dans l'entreprise
+  phone         String?
+  email         String?
+  notes         String?
+  opportunities CrmOpportunity[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model CrmOpportunity {
+  id         String      @id @default(cuid())
+  title      String      // ex: "Séminaire annuel Société X"
+  companyId  String?
+  company    CrmCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId  String?
+  contact    CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  stage      String      @default("PROSPECT") // "PROSPECT" | "DEVIS_ENVOYE" | "CONFIRME" | "REALISE" | "PERDU"
+  order      Int         @default(0) // ordre d'affichage au sein de sa colonne (kanban), modifiable par glisser-déposer
+  eventDate  String?     // "YYYY-MM-DD"
+  guestCount Int?
+  amount     Float?      // montant estimé / devis
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 }

@@ -42,6 +42,7 @@ export const PUT = withErrorHandling(async (req: NextRequest) => {
     employeeId: user.employee?.id ?? null,
     canAccessMarges: updated.canAccessMarges,
     canAccessMercuriale: updated.canAccessMercuriale,
+    canAccessCrm: updated.canAccessCrm,
   });
 
   const res = NextResponse.json({ username: updated.username });
