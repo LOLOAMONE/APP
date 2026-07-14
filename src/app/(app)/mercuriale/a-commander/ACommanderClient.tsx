@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
+import { Modal } from "@/components/Modal";
 
 type SupplierItem = {
   id: string;
@@ -33,6 +34,8 @@ export function ACommanderClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [showConfirmAll, setShowConfirmAll] = useState(false);
+  const [markingAll, setMarkingAll] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -81,19 +84,78 @@ export function ACommanderClient() {
     await load();
   }
 
+  async function markAllOrdered() {
+    setMarkingAll(true);
+    await Promise.all(
+      rows.map(({ item }) =>
+        fetch(`/api/supplier-items/${item.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reference: item.reference,
+            designation: item.designation,
+            packaging: item.packaging,
+            orderQuantity: item.orderQuantity,
+            unitPriceHT: item.unitPriceHT,
+            orderedAt: todayISO(),
+            receivedAt: item.receivedAt,
+          }),
+        })
+      )
+    );
+    setMarkingAll(false);
+    setShowConfirmAll(false);
+    await load();
+  }
+
   return (
     <div>
-      <div className="mb-4">
-        <Link href="/mercuriale" className="text-sm text-brand-600 hover:text-brand-800">
-          ← Retour à la Mercuriale
-        </Link>
-        <h1 className="mt-1 text-xl font-bold text-gray-900">Commande à faire</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Tous les articles avec une quantité à commander, tous fournisseurs confondus. Coche « Commandé » une fois
-          la commande passée — la date est enregistrée automatiquement et l&apos;article rejoint le suivi de
-          réception dans la Mercuriale.
-        </p>
+      <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row">
+        <div>
+          <Link href="/mercuriale" className="text-sm text-brand-600 hover:text-brand-800">
+            ← Retour à la Mercuriale
+          </Link>
+          <h1 className="mt-1 text-xl font-bold text-gray-900">Commande à faire</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Tous les articles avec une quantité à commander, tous fournisseurs confondus. Coche « Commandé » une fois
+            la commande passée — la date est enregistrée automatiquement et l&apos;article rejoint le suivi de
+            réception dans la Mercuriale.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowConfirmAll(true)}
+          disabled={rows.length === 0}
+          className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Supprimer toutes les commandes
+        </button>
       </div>
+
+      {showConfirmAll && (
+        <Modal title="Confirmer" onClose={() => setShowConfirmAll(false)}>
+          <p className="text-sm text-gray-700">
+            Marquer les {rows.length} article{rows.length > 1 ? "s" : ""} comme commandé{rows.length > 1 ? "s" : ""}{" "}
+            ? Ils disparaîtront de cette liste et rejoindront le suivi de réception dans la Mercuriale.
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowConfirmAll(false)}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={markAllOrdered}
+              disabled={markingAll}
+              className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+            >
+              {markingAll ? "Enregistrement..." : "Confirmer"}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {loading ? (
         <p className="text-sm text-gray-500">Chargement...</p>
