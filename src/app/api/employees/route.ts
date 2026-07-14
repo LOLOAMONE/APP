@@ -17,9 +17,18 @@ export const GET = withErrorHandling(async () => {
   await requireUser();
   const employees = await prisma.employee.findMany({
     orderBy: { name: "asc" },
-    select: { id: true, name: true, position: true, hourlyRate: true, userId: true },
+    select: {
+      id: true,
+      name: true,
+      position: true,
+      hourlyRate: true,
+      userId: true,
+      _count: { select: { scheduleTemplate: true } },
+    },
   });
-  return NextResponse.json(employees);
+  return NextResponse.json(
+    employees.map(({ _count, ...e }) => ({ ...e, templateDaysCount: _count.scheduleTemplate }))
+  );
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {

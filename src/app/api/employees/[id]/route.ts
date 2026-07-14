@@ -12,6 +12,20 @@ const updateEmployeeSchema = z.object({
   password: z.string().min(6).optional().or(z.literal("")),
 });
 
+export const GET = withErrorHandling(
+  async (_req: NextRequest, { params }: { params: { id: string } }) => {
+    await requireAdmin();
+    const employee = await prisma.employee.findUnique({
+      where: { id: params.id },
+      select: { id: true, name: true, position: true, hourlyRate: true, userId: true },
+    });
+    if (!employee) {
+      return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
+    }
+    return NextResponse.json(employee);
+  }
+);
+
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
     await requireAdmin();

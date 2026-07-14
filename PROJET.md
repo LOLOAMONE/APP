@@ -53,9 +53,9 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 
 ### Planning (`/planning`)
 
-- **Employés** — fiches (poste, taux horaire), rattachables à un compte utilisateur.
+- **Employés** — liste (`/planning/employes`) avec poste, taux horaire, et badge de nombre de jours configurés dans le planning de base. Chaque employé a une fiche dédiée (`/planning/employes/[id]`) où se gèrent ses informations (nom, poste, taux horaire, identifiants) et son **planning de base** (grille des 7 jours, horaires récurrents), rattachable à un compte utilisateur.
 - **Créneaux** — planning hebdomadaire par employé, navigation semaine par semaine.
-- **Modèle hebdomadaire** — créneaux récurrents par employé, applicables en un clic pour générer la semaine.
+- **Modèle hebdomadaire** — créneaux récurrents édités depuis la fiche employé, applicables en un clic (bouton "Appliquer le planning de base" dans `/planning`) pour générer la semaine.
 - **Absences** — congés/maladie avec statut (en attente / approuvé / refusé), workflow de validation pour les demandes des employés.
 
 ## Modèles de données (Prisma)
