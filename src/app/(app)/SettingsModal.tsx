@@ -138,7 +138,7 @@ function ProfileTab({ username }: { username: string }) {
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-brand-600">{error}</p>}
       {success && !error && <p className="text-sm text-green-600">Profil mis à jour.</p>}
 
       <div className="flex justify-end gap-2 pt-2">

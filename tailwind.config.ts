@@ -5,18 +5,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Couleur officielle de la charte Amoné : RVB 101/11/27, Pantone 56-16 C.
+        // Couleur officielle de la charte Amoné : bordeaux #901C3A.
+        // Utilisée pour tous les accents de l'application (boutons primaires ET
+        // dangereux/suppression, alertes, badges) — un seul point de configuration.
         brand: {
-          50: "#fdedf0",
-          100: "#fad6dc",
-          200: "#f6acb9",
-          300: "#ef6c83",
-          400: "#e72245",
-          500: "#a6122c",
-          600: "#650b1b",
-          700: "#450812",
-          800: "#33060e",
-          900: "#25040a",
+          50: "#fbeff2",
+          100: "#f5dbe2",
+          200: "#ebb7c4",
+          300: "#df7c95",
+          400: "#d3365f",
+          500: "#b32348",
+          600: "#901c3a",
+          700: "#73162e",
+          800: "#581325",
+          900: "#42101d",
         },
         gold: {
           50: "#f9f6f1",

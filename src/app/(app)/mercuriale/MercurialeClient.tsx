@@ -657,7 +657,7 @@ export function MercurialeClient() {
             <button onClick={() => openEditSupplier(supplier)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
               <Pencil className="h-4 w-4" aria-hidden />
             </button>
-            <button onClick={() => handleDeleteSupplier(supplier)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+            <button onClick={() => handleDeleteSupplier(supplier)} title="Supprimer" aria-label="Supprimer" className="text-brand-600 hover:text-brand-800">
               <Trash2 className="h-4 w-4" aria-hidden />
             </button>
           </div>
@@ -834,7 +834,7 @@ export function MercurialeClient() {
                             <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
                               <Pencil className="h-4 w-4" aria-hidden />
                             </button>
-                            <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                            <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-brand-600 hover:text-brand-800">
                               <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
@@ -1112,7 +1112,7 @@ export function MercurialeClient() {
               />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-brand-600">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
               <button
@@ -1221,7 +1221,7 @@ export function MercurialeClient() {
               </div>
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-brand-600">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
               <button
@@ -1264,7 +1264,7 @@ export function MercurialeClient() {
               {units.map((u) => (
                 <li key={u.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
                   {u.label}
-                  <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                  <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-brand-600 hover:text-brand-800">
                     <Trash2 className="h-4 w-4" aria-hidden />
                   </button>
                 </li>

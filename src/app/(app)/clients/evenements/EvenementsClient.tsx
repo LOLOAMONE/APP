@@ -25,7 +25,7 @@ const STAGES = [
   { key: "DEVIS_ENVOYE", label: "Devis envoyé", color: "bg-blue-100 text-blue-700" },
   { key: "CONFIRME", label: "Confirmé", color: "bg-amber-100 text-amber-700" },
   { key: "REALISE", label: "Réalisé", color: "bg-green-100 text-green-700" },
-  { key: "PERDU", label: "Perdu", color: "bg-red-100 text-red-700" },
+  { key: "PERDU", label: "Perdu", color: "bg-brand-100 text-brand-700" },
 ] as const;
 
 type Stage = (typeof STAGES)[number]["key"];
@@ -238,7 +238,7 @@ export function EvenementsClient() {
                         }}
                         title="Supprimer"
                         aria-label="Supprimer"
-                        className="shrink-0 text-red-400 hover:text-red-600"
+                        className="shrink-0 text-brand-400 hover:text-brand-600"
                       >
                         <Trash2 className="h-3.5 w-3.5" aria-hidden />
                       </button>
@@ -366,7 +366,7 @@ export function EvenementsClient() {
               />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-brand-600">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">

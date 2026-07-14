@@ -150,7 +150,7 @@ export function EntreprisesClient() {
                       <button onClick={() => openEdit(c)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
                         <Pencil className="h-4 w-4" aria-hidden />
                       </button>
-                      <button onClick={() => handleDelete(c)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                      <button onClick={() => handleDelete(c)} title="Supprimer" aria-label="Supprimer" className="text-brand-600 hover:text-brand-800">
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
@@ -206,7 +206,7 @@ export function EntreprisesClient() {
               />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-brand-600">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">

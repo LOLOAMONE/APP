@@ -118,7 +118,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
         </button>
       </div>
 
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="mb-3 text-sm text-brand-600">{error}</p>}
 
       <div className="overflow-x-auto rounded-lg border border-gray-200">
         <table>
@@ -261,7 +261,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
               compte employé avec planning, utilise plutôt &laquo; Gérer les employés &raquo;.
             </p>
 
-            {formError && <p className="text-sm text-red-600">{formError}</p>}
+            {formError && <p className="text-sm text-brand-600">{formError}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
               <button

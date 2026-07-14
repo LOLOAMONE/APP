@@ -50,7 +50,7 @@ function moveById<T extends { id: string }>(list: T[], fromId: string, toId: str
 function marginColorClass(percent: number): string {
   if (percent >= 60) return "text-green-600";
   if (percent >= 40) return "text-orange-500";
-  return "text-red-600";
+  return "text-brand-600";
 }
 
 type SortKey =
@@ -351,7 +351,7 @@ export function MenusClient() {
                       <button onClick={() => openEdit(m)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
                         <Pencil className="h-4 w-4" aria-hidden />
                       </button>
-                      <button onClick={() => handleDelete(m)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
+                      <button onClick={() => handleDelete(m)} title="Supprimer" aria-label="Supprimer" className="text-brand-600 hover:text-brand-800">
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
@@ -439,7 +439,7 @@ export function MenusClient() {
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
-                      className="text-gray-400 hover:text-red-600"
+                      className="text-gray-400 hover:text-brand-600"
                       aria-label="Retirer"
                     >
                       <X className="h-4 w-4" aria-hidden />
@@ -464,7 +464,7 @@ export function MenusClient() {
               </div>
             )}
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-brand-600">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
               <button

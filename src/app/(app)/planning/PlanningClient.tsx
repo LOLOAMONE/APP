@@ -378,11 +378,11 @@ function ShiftModal({
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-brand-600">{error}</p>}
 
         <div className="flex items-center justify-between pt-2">
           {onDelete ? (
-            <button type="button" onClick={onDelete} className="text-sm text-red-600 hover:text-red-800">
+            <button type="button" onClick={onDelete} className="text-sm text-brand-600 hover:text-brand-800">
               Supprimer
             </button>
           ) : (
@@ -520,7 +520,7 @@ function AbsencesSection({
                           ? "bg-green-100 text-green-800"
                           : a.status === "PENDING"
                           ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
+                          : "bg-brand-100 text-brand-800"
                       }`}
                     >
                       {a.status === "APPROVED" ? "Validé" : a.status === "PENDING" ? "En attente" : "Refusé"}
@@ -533,13 +533,13 @@ function AbsencesSection({
                           <button onClick={() => updateStatus(a, "APPROVED")} className="text-green-700 hover:underline">
                             Valider
                           </button>
-                          <button onClick={() => updateStatus(a, "REJECTED")} className="text-red-600 hover:underline">
+                          <button onClick={() => updateStatus(a, "REJECTED")} className="text-brand-600 hover:underline">
                             Refuser
                           </button>
                         </>
                       )}
                       {isAdmin && (
-                        <button onClick={() => handleDelete(a)} title="Supprimer" aria-label="Supprimer" className="text-gray-400 hover:text-red-600">
+                        <button onClick={() => handleDelete(a)} title="Supprimer" aria-label="Supprimer" className="text-gray-400 hover:text-brand-600">
                           <Trash2 className="h-4 w-4" aria-hidden />
                         </button>
                       )}
@@ -590,7 +590,7 @@ function AbsencesSection({
               <input value={note} onChange={(e) => setNote(e.target.value)} className="w-full" />
             </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm text-brand-600">{error}</p>}
 
             <div className="flex justify-end gap-2 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">

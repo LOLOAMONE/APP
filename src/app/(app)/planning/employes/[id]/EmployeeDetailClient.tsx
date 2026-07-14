@@ -169,7 +169,7 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
           onClick={handleDelete}
           title="Supprimer l'employé"
           aria-label="Supprimer l'employé"
-          className="text-red-600 hover:text-red-800"
+          className="text-brand-600 hover:text-brand-800"
         >
           <Trash2 className="h-5 w-5" aria-hidden />
         </button>
@@ -226,7 +226,7 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
           </div>
         </div>
 
-        {infoError && <p className="text-sm text-red-600">{infoError}</p>}
+        {infoError && <p className="text-sm text-brand-600">{infoError}</p>}
 
         <div className="flex items-center justify-end gap-3 pt-1">
           {infoSaved && <span className="text-sm text-green-600">Enregistré</span>}
@@ -297,7 +297,7 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
           </table>
         </div>
 
-        {templateError && <p className="mt-3 text-sm text-red-600">{templateError}</p>}
+        {templateError && <p className="mt-3 text-sm text-brand-600">{templateError}</p>}
 
         <div className="mt-4 flex items-center justify-end gap-3">
           {templateSaved && <span className="text-sm text-green-600">Enregistré</span>}
