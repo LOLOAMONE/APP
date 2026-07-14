@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 
 type Employee = {
@@ -214,10 +215,10 @@ export function EmployeesClient() {
                   <td>
                     <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
                       <button onClick={() => openEdit(emp)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                        ✏️
+                        <Pencil className="h-4 w-4" aria-hidden />
                       </button>
                       <button onClick={() => handleDelete(emp)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                        🗑️
+                        <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
                   </td>

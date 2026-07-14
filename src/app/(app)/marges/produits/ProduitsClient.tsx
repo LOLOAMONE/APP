@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import {
   Channel,
@@ -436,10 +437,10 @@ export function ProduitsClient() {
                         <td>
                           <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
                             <button onClick={() => openEdit(p)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                              ✏️
+                              <Pencil className="h-4 w-4" aria-hidden />
                             </button>
                             <button onClick={() => handleDelete(p)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                              🗑️
+                              <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
                         </td>
@@ -537,7 +538,7 @@ export function ProduitsClient() {
                             aria-label="Retirer"
                             title="Retirer"
                           >
-                            ✕
+                            <X className="h-4 w-4" aria-hidden />
                           </button>
                         </div>
                         <div className="grid grid-cols-3 gap-3">

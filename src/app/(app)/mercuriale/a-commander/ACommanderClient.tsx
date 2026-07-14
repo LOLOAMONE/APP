@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 
 type SupplierItem = {
   id: string;
@@ -132,7 +133,8 @@ export function ACommanderClient() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
                       >
-                        🔗 Voir
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                        Voir
                       </a>
                     )}
                   </td>

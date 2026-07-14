@@ -2,6 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  Calendar,
+  Check,
+  ClipboardList,
+  ExternalLink,
+  Mail,
+  Package,
+  Pencil,
+  Phone,
+  RotateCcw,
+  StickyNote,
+  Tag,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Modal } from "@/components/Modal";
 
 type SupplierItem = {
@@ -586,7 +601,8 @@ export function MercurialeClient() {
                 title={`${pending} article(s) commandé(s) en attente de réception`}
                 className="rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700"
               >
-                📦{pending}
+                <Package className="mr-0.5 inline h-3 w-3" aria-hidden />
+                {pending}
               </span>
             )}
           </div>
@@ -596,37 +612,37 @@ export function MercurialeClient() {
           <div className="grid gap-x-6 gap-y-1.5 text-sm text-gray-600 sm:grid-cols-2">
             {supplier.orderSchedule && (
               <p className="flex items-start gap-2">
-                <span>📅</span>
+                <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                 <span>{supplier.orderSchedule}</span>
               </p>
             )}
             {supplier.minimumOrder && (
               <p className="flex items-start gap-2">
-                <span>📦</span>
+                <Package className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                 <span>Franco : {supplier.minimumOrder}</span>
               </p>
             )}
             {supplier.email && (
               <p className="flex items-start gap-2">
-                <span>📧</span>
+                <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                 <span>{supplier.email}</span>
               </p>
             )}
             {supplier.phone && (
               <p className="flex items-start gap-2">
-                <span>☎️</span>
+                <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                 <span>{supplier.phone}</span>
               </p>
             )}
             {supplier.clientCode && (
               <p className="flex items-start gap-2">
-                <span>🔖</span>
+                <Tag className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                 <span>Code client : {supplier.clientCode}</span>
               </p>
             )}
             {supplier.notes && (
               <p className="flex items-start gap-2 sm:col-span-2">
-                <span>📝</span>
+                <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                 <span className="whitespace-pre-line">{supplier.notes}</span>
               </p>
             )}
@@ -639,10 +655,10 @@ export function MercurialeClient() {
           </div>
           <div className="flex shrink-0 gap-3 text-sm">
             <button onClick={() => openEditSupplier(supplier)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-              ✏️
+              <Pencil className="h-4 w-4" aria-hidden />
             </button>
             <button onClick={() => handleDeleteSupplier(supplier)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-              🗑️
+              <Trash2 className="h-4 w-4" aria-hidden />
             </button>
           </div>
         </div>
@@ -659,9 +675,10 @@ export function MercurialeClient() {
               {sortKey !== "custom" && (
                 <button
                   onClick={() => setSortKey("custom")}
-                  className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
+                  className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
                 >
-                  ↺ Ordre personnalisé
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                  Ordre personnalisé
                 </button>
               )}
               <button
@@ -687,7 +704,7 @@ export function MercurialeClient() {
           <p className="mb-2 text-xs text-gray-400">
             {search
               ? "Le glisser-déposer est désactivé pendant une recherche."
-              : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
+              : "Clique sur « Ordre personnalisé » pour réactiver le glisser-déposer."}
           </p>
         )}
 
@@ -721,10 +738,16 @@ export function MercurialeClient() {
                         Prix carton/colis HT{sortArrow("casePriceHT")}
                       </th>
                       <th className="cursor-pointer select-none" onClick={() => toggleSort("orderedAt")}>
-                        📦 Commandé le{sortArrow("orderedAt")}
+                        <span className="inline-flex items-center gap-1">
+                          <Package className="h-3.5 w-3.5" aria-hidden />
+                          Commandé le{sortArrow("orderedAt")}
+                        </span>
                       </th>
                       <th className="cursor-pointer select-none" onClick={() => toggleSort("receivedAt")}>
-                        ✅ Reçu le{sortArrow("receivedAt")}
+                        <span className="inline-flex items-center gap-1">
+                          <Check className="h-3.5 w-3.5" aria-hidden />
+                          Reçu le{sortArrow("receivedAt")}
+                        </span>
                       </th>
                       <th></th>
                     </tr>
@@ -751,7 +774,8 @@ export function MercurialeClient() {
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
                             >
-                              🔗 Voir
+                              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                              Voir
                             </a>
                           )}
                         </td>
@@ -808,10 +832,10 @@ export function MercurialeClient() {
                         <td>
                           <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
                             <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                              ✏️
+                              <Pencil className="h-4 w-4" aria-hidden />
                             </button>
                             <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                              🗑️
+                              <Trash2 className="h-4 w-4" aria-hidden />
                             </button>
                           </div>
                         </td>
@@ -837,9 +861,10 @@ export function MercurialeClient() {
         <div className="flex gap-2">
           <Link
             href="/mercuriale/a-commander"
-            className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            📋 À commander
+            <ClipboardList className="h-4 w-4" aria-hidden />
+            À commander
             {toOrderCount > 0 && (
               <span className="ml-1.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700">
                 {toOrderCount}
@@ -877,10 +902,10 @@ export function MercurialeClient() {
                       className="w-32 text-sm"
                     />
                     <button onClick={() => saveEditCategoryTab(category)} title="Enregistrer" aria-label="Enregistrer" className="text-green-600 hover:text-green-800">
-                      ✓
+                      <Check className="h-4 w-4" aria-hidden />
                     </button>
                     <button onClick={() => setEditingCategoryTab(null)} title="Annuler" aria-label="Annuler" className="text-gray-400 hover:text-gray-600">
-                      ✕
+                      <X className="h-4 w-4" aria-hidden />
                     </button>
                   </span>
                 );
@@ -902,7 +927,7 @@ export function MercurialeClient() {
                       aria-label="Renommer la catégorie"
                       className="ml-0.5 text-gray-300 hover:text-brand-600"
                     >
-                      ✏️
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
                     </button>
                   )}
                 </span>
@@ -922,9 +947,10 @@ export function MercurialeClient() {
                 {sortKey !== "custom" && (
                   <button
                     onClick={() => setSortKey("custom")}
-                    className="whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
+                    className="inline-flex items-center gap-1 whitespace-nowrap text-sm text-gray-500 hover:text-gray-700"
                   >
-                    ↺ Ordre personnalisé
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                    Ordre personnalisé
                   </button>
                 )}
               </div>
@@ -932,7 +958,7 @@ export function MercurialeClient() {
                 <p className="mb-4 text-xs text-gray-400">
                   {search
                     ? "Le glisser-déposer est désactivé pendant une recherche."
-                    : "Clique sur « ↺ Ordre personnalisé » pour réactiver le glisser-déposer."}
+                    : "Clique sur « Ordre personnalisé » pour réactiver le glisser-déposer."}
                 </p>
               )}
               {activeSuppliers.map((s) => renderSupplierPanel(s, false))}
@@ -962,9 +988,10 @@ export function MercurialeClient() {
                   {pending > 0 && (
                     <span
                       title={`${pending} article(s) commandé(s) en attente de réception`}
-                      className="ml-1.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700"
+                      className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700"
                     >
-                      📦{pending}
+                      <Package className="h-3 w-3" aria-hidden />
+                      {pending}
                     </span>
                   )}
                 </button>
@@ -1012,8 +1039,9 @@ export function MercurialeClient() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                📅 Commande &amp; livraison
+              <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                <Calendar className="h-4 w-4 text-gray-400" aria-hidden />
+                Commande &amp; livraison
               </label>
               <input
                 placeholder="ex : Lundi avant 10h pour livraison mercredi"
@@ -1024,7 +1052,10 @@ export function MercurialeClient() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">📦 Franco / minimum</label>
+                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                  <Package className="h-4 w-4 text-gray-400" aria-hidden />
+                  Franco / minimum
+                </label>
                 <input
                   placeholder="ex : 400€ HT ou 10 Bibs"
                   value={supplierForm.minimumOrder}
@@ -1033,7 +1064,10 @@ export function MercurialeClient() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">🔖 Code client</label>
+                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                  <Tag className="h-4 w-4 text-gray-400" aria-hidden />
+                  Code client
+                </label>
                 <input
                   value={supplierForm.clientCode}
                   onChange={(e) => setSupplierForm({ ...supplierForm, clientCode: e.target.value })}
@@ -1043,7 +1077,10 @@ export function MercurialeClient() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">📧 Email</label>
+                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                  <Mail className="h-4 w-4 text-gray-400" aria-hidden />
+                  Email
+                </label>
                 <input
                   value={supplierForm.email}
                   onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })}
@@ -1051,7 +1088,10 @@ export function MercurialeClient() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700">☎️ Téléphone</label>
+                <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                  <Phone className="h-4 w-4 text-gray-400" aria-hidden />
+                  Téléphone
+                </label>
                 <input
                   value={supplierForm.phone}
                   onChange={(e) => setSupplierForm({ ...supplierForm, phone: e.target.value })}
@@ -1060,7 +1100,10 @@ export function MercurialeClient() {
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">📝 Notes (optionnel)</label>
+              <label className="mb-1 flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                <StickyNote className="h-4 w-4 text-gray-400" aria-hidden />
+                Notes (optionnel)
+              </label>
               <textarea
                 value={supplierForm.notes}
                 onChange={(e) => setSupplierForm({ ...supplierForm, notes: e.target.value })}
@@ -1222,7 +1265,7 @@ export function MercurialeClient() {
                 <li key={u.id} className="flex items-center justify-between border-b border-gray-100 px-3 py-2 text-sm last:border-0">
                   {u.label}
                   <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                    🗑️
+                    <Trash2 className="h-4 w-4" aria-hidden />
                   </button>
                 </li>
               ))}

@@ -18,7 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canAccessMercuriale={user.canAccessMercuriale}
         canAccessCrm={user.canAccessCrm}
       />
-      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-[1600px] px-6 py-6 lg:px-10">{children}</main>
     </div>
   );
 }

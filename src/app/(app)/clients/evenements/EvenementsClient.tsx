@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Building2, Calendar, Euro, Plus, Trash2, Users } from "lucide-react";
 import { Modal } from "@/components/Modal";
 
 type Company = { id: string; name: string };
@@ -205,7 +206,7 @@ export function EvenementsClient() {
                   aria-label="Ajouter un événement"
                   className="text-gray-400 hover:text-brand-600"
                 >
-                  ➕
+                  <Plus className="h-4 w-4" aria-hidden />
                 </button>
               </div>
               <div className="min-h-[100px] space-y-2 rounded-lg bg-gray-50 p-2">
@@ -239,13 +240,33 @@ export function EvenementsClient() {
                         aria-label="Supprimer"
                         className="shrink-0 text-red-400 hover:text-red-600"
                       >
-                        🗑️
+                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
                       </button>
                     </div>
-                    {o.company && <p className="mt-1 text-xs text-gray-500">🏢 {o.company.name}</p>}
-                    {o.eventDate && <p className="text-xs text-gray-500">📅 {formatDate(o.eventDate)}</p>}
-                    {o.guestCount != null && <p className="text-xs text-gray-500">👥 {o.guestCount} pers.</p>}
-                    {o.amount != null && <p className="text-xs font-medium text-gray-700">💶 {o.amount.toFixed(2)} €</p>}
+                    {o.company && (
+                      <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                        <Building2 className="h-3 w-3" aria-hidden />
+                        {o.company.name}
+                      </p>
+                    )}
+                    {o.eventDate && (
+                      <p className="flex items-center gap-1 text-xs text-gray-500">
+                        <Calendar className="h-3 w-3" aria-hidden />
+                        {formatDate(o.eventDate)}
+                      </p>
+                    )}
+                    {o.guestCount != null && (
+                      <p className="flex items-center gap-1 text-xs text-gray-500">
+                        <Users className="h-3 w-3" aria-hidden />
+                        {o.guestCount} pers.
+                      </p>
+                    )}
+                    {o.amount != null && (
+                      <p className="flex items-center gap-1 text-xs font-medium text-gray-700">
+                        <Euro className="h-3 w-3" aria-hidden />
+                        {o.amount.toFixed(2)} €
+                      </p>
+                    )}
                   </div>
                 ))}
                 {items.length === 0 && <p className="py-4 text-center text-xs text-gray-400">Aucun événement</p>}

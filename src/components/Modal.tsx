@@ -1,5 +1,7 @@
 "use client";
 
+import { X } from "lucide-react";
+
 export function Modal({
   title,
   onClose,
@@ -21,7 +23,7 @@ export function Modal({
             className="text-gray-400 hover:text-gray-600"
             aria-label="Fermer"
           >
-            ✕
+            <X className="h-5 w-5" aria-hidden />
           </button>
         </div>
         {children}

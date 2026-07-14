@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { addDays } from "date-fns";
+import { Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import {
   formatDayLabel,
@@ -539,7 +540,7 @@ function AbsencesSection({
                       )}
                       {isAdmin && (
                         <button onClick={() => handleDelete(a)} title="Supprimer" aria-label="Supprimer" className="text-gray-400 hover:text-red-600">
-                          🗑️
+                          <Trash2 className="h-4 w-4" aria-hidden />
                         </button>
                       )}
                     </div>

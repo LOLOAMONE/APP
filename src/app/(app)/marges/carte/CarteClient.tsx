@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check, X } from "lucide-react";
 
 type ProductIngredientRow = {
   quantity: number;
@@ -85,10 +86,10 @@ function PriceEditForm({
         aria-label="Enregistrer"
         className="text-green-600 hover:text-green-800"
       >
-        ✓
+        <Check className="h-4 w-4" aria-hidden />
       </button>
       <button onClick={onCancel} title="Annuler" aria-label="Annuler" className="text-gray-400 hover:text-gray-600">
-        ✕
+        <X className="h-4 w-4" aria-hidden />
       </button>
     </span>
   );

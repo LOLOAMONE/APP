@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Check, History, Pencil, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { INGREDIENT_UNITS, IngredientUnit } from "@/lib/margins";
 
@@ -355,13 +356,13 @@ export function IngredientsClient() {
                           <td>
                             <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
                               <button onClick={() => openHistory(ing)} title="Historique" aria-label="Historique" className="text-gray-500 hover:text-gray-700">
-                                🕒
+                                <History className="h-4 w-4" aria-hidden />
                               </button>
                               <button onClick={() => openEdit(ing)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                                ✏️
+                                <Pencil className="h-4 w-4" aria-hidden />
                               </button>
                               <button onClick={() => handleDelete(ing)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                                🗑️
+                                <Trash2 className="h-4 w-4" aria-hidden />
                               </button>
                             </div>
                           </td>
@@ -518,10 +519,10 @@ export function IngredientsClient() {
                       />
                       <div className="flex shrink-0 gap-2">
                         <button onClick={() => saveEditUnit(u.id)} title="Enregistrer" aria-label="Enregistrer" className="text-green-600 hover:text-green-800">
-                          ✓
+                          <Check className="h-4 w-4" aria-hidden />
                         </button>
                         <button onClick={() => setEditingUnitId(null)} title="Annuler" aria-label="Annuler" className="text-gray-400 hover:text-gray-600">
-                          ✕
+                          <X className="h-4 w-4" aria-hidden />
                         </button>
                       </div>
                     </>
@@ -530,10 +531,10 @@ export function IngredientsClient() {
                       <span className="flex-1">{u.label}</span>
                       <div className="flex shrink-0 gap-2">
                         <button onClick={() => startEditUnit(u)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                          ✏️
+                          <Pencil className="h-4 w-4" aria-hidden />
                         </button>
                         <button onClick={() => handleDeleteUnit(u.id)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                          🗑️
+                          <Trash2 className="h-4 w-4" aria-hidden />
                         </button>
                       </div>
                     </>

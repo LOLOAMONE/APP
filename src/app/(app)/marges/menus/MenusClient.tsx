@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2, X } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { computeCostOfGoods, computeMargin, TVA_SUR_PLACE, TVA_A_EMPORTER } from "@/lib/margins";
 
@@ -348,10 +349,10 @@ export function MenusClient() {
                   <td>
                     <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
                       <button onClick={() => openEdit(m)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                        ✏️
+                        <Pencil className="h-4 w-4" aria-hidden />
                       </button>
                       <button onClick={() => handleDelete(m)} title="Supprimer" aria-label="Supprimer" className="text-red-600 hover:text-red-800">
-                        🗑️
+                        <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
                     </div>
                   </td>
@@ -441,7 +442,7 @@ export function MenusClient() {
                       className="text-gray-400 hover:text-red-600"
                       aria-label="Retirer"
                     >
-                      ✕
+                      <X className="h-4 w-4" aria-hidden />
                     </button>
                   </div>
                 ))}
