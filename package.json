@@ -12,7 +12,8 @@
     "seed:menu": "tsx prisma/seed-menu.ts",
     "seed:mercuriale": "tsx prisma/seed-mercuriale.ts",
     "seed:architecture": "tsx prisma/seed-architecture.ts",
-    "migrate": "prisma migrate dev"
+    "migrate": "prisma migrate dev",
+    "migrate:multitenant": "tsx prisma/migrate-to-multitenant.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

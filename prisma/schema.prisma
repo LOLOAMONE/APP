@@ -1,6 +1,14 @@
 // Schéma de la base de données du gestionnaire de restaurant.
 // Note: le connecteur SQLite ne supporte pas les enums natifs Prisma,
-// les champs "rôle/type/statut" sont donc des String validés côté application (voir src/lib/validation.ts).
+// les champs "rôle/type/statut/module" sont donc des String validés côté application (voir src/lib/validation.ts).
+//
+// Architecture multi-restaurants :
+// - Restaurant est l'unité d'isolation des données métier (chaque table métier a un restaurantId direct
+//   quand elle est listée/créée indépendamment ; les tables enfants/jonction héritent du scope de leur parent).
+// - User est une identité globale. Son rattachement à un ou plusieurs restaurants passe par UserRestaurant
+//   (rôle local ADMIN/EMPLOYEE) et/ou ModulePermission (accès à un module précis, sur un restaurant
+//   donné ou à portée globale via restaurantId = null).
+// - User.isSuperAdmin outrepasse tout le reste, sans avoir besoin d'aucune ligne UserRestaurant/ModulePermission.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,30 +19,87 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Restaurant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  status    String   @default("ACTIVE") // "ACTIVE" | "SUSPENDED" | "ARCHIVED"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships       UserRestaurant[]
+  modulePermissions ModulePermission[]
+  employees         Employee[]
+  ingredients       Ingredient[]
+  measureUnits      MeasureUnit[]
+  products          Product[]
+  menus             Menu[]
+  suppliers         Supplier[]
+  packagingUnits    PackagingUnit[]
+  crmCompanies      CrmCompany[]
+  crmContacts       CrmContact[]
+  crmOpportunities  CrmOpportunity[]
+}
+
 model User {
-  id                  String    @id @default(cuid())
-  username            String    @unique
-  passwordHash        String
-  role                String    // "ADMIN" | "EMPLOYEE" — ADMIN a toujours accès à tout
-  canAccessMarges     Boolean   @default(false) // ignoré si role = ADMIN
-  canAccessMercuriale Boolean   @default(false) // ignoré si role = ADMIN
-  canAccessCrm        Boolean   @default(false) // ignoré si role = ADMIN
-  employee            Employee?
-  createdAt           DateTime  @default(now())
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  isSuperAdmin Boolean  @default(false) // outrepasse tout, indépendant de tout restaurant
+  createdAt    DateTime @default(now())
+
+  memberships       UserRestaurant[]
+  modulePermissions ModulePermission[]
+  employee          Employee?
+}
+
+// Rattachement d'un utilisateur à un restaurant, avec son rôle LOCAL à ce restaurant.
+// Un ADMIN local a accès à tous les modules de ce restaurant sans ligne ModulePermission dédiée.
+model UserRestaurant {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  role         String // "ADMIN" | "EMPLOYEE"
+  createdAt    DateTime   @default(now())
+
+  @@unique([userId, restaurantId])
+}
+
+// Accès d'un utilisateur à un module précis ("marges" | "mercuriale" | "crm" | futurs modules
+// transverses "marketing" | "ticketing" | ...), soit sur UN restaurant, soit à portée globale
+// (restaurantId = null) pour les comptes transverses réseau.
+//
+// Note SQLite : la contrainte @@unique ci-dessous ne bloque PAS les doublons quand restaurantId
+// est NULL (NULL n'est jamais égal à NULL en SQL). L'unicité des permissions à portée globale
+// (restaurantId null) doit être vérifiée côté application (recherche avant insertion).
+model ModulePermission {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module       String
+  restaurantId String?
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@unique([userId, module, restaurantId])
 }
 
 model Employee {
-  id          String   @id @default(cuid())
-  name        String
-  position    String
-  hourlyRate  Float?
-  userId      String?  @unique
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  shifts      Shift[]
-  absences    Absence[]
+  id               String                  @id @default(cuid())
+  restaurantId     String
+  restaurant       Restaurant              @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name             String
+  position         String
+  hourlyRate       Float?
+  userId           String?                 @unique
+  user             User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shifts           Shift[]
+  absences         Absence[]
   scheduleTemplate ScheduleTemplateEntry[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
 }
 
 // Créneau récurrent du planning de base d'un employé (ex: tous les lundis 9h-17h).
@@ -42,30 +107,36 @@ model ScheduleTemplateEntry {
   id         String   @id @default(cuid())
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  dayOfWeek  Int      // 0 = lundi ... 6 = dimanche
-  startTime  String   // "HH:mm"
-  endTime    String   // "HH:mm"
+  dayOfWeek  Int // 0 = lundi ... 6 = dimanche
+  startTime  String // "HH:mm"
+  endTime    String // "HH:mm"
 }
 
 model Ingredient {
-  id            String                 @id @default(cuid())
-  name          String
-  unit          String                 // "kg" | "L" | "piece" | unité personnalisée (voir MeasureUnit)
-  price         Float                  // prix d'achat actuel, dans l'unité ci-dessus
-  supplier      String?
-  category      String?                // sous-catégorie libre (ex: "Viandes", "Emballages")
-  order         Int                    @default(0) // ordre d'affichage, modifiable par glisser-déposer
-  priceHistory  IngredientPriceHistory[]
-  productLinks  ProductIngredient[]
-  createdAt     DateTime               @default(now())
-  updatedAt     DateTime               @updatedAt
+  id           String                   @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant               @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  unit         String // "kg" | "L" | "piece" | unité personnalisée (voir MeasureUnit)
+  price        Float // prix d'achat actuel, dans l'unité ci-dessus
+  supplier     String?
+  category     String? // sous-catégorie libre (ex: "Viandes", "Emballages")
+  order        Int                      @default(0) // ordre d'affichage, modifiable par glisser-déposer
+  priceHistory IngredientPriceHistory[]
+  productLinks ProductIngredient[]
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
 }
 
 // Liste réutilisable d'unités personnalisées (en plus de kg/L/pièce), utilisée à la fois comme
 // unité d'achat d'un ingrédient et comme unité de quantité en recette pour cet ingrédient.
 model MeasureUnit {
-  id    String @id @default(cuid())
-  label String @unique
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  label        String
+
+  @@unique([restaurantId, label])
 }
 
 model IngredientPriceHistory {
@@ -77,23 +148,27 @@ model IngredientPriceHistory {
 }
 
 model Product {
-  id              String              @id @default(cuid())
-  name            String
-  category        String              @default("Autre")
-  priceOnSite     Float               // prix de vente TTC sur place
-  priceTakeaway   Float               // prix de vente TTC à emporter
-  order           Int                 @default(0) // ordre d'affichage au sein de sa catégorie, modifiable par glisser-déposer
-  ingredients     ProductIngredient[]
-  menuLinks       MenuItem[]
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  id            String              @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant          @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name          String
+  category      String              @default("Autre")
+  priceOnSite   Float // prix de vente TTC sur place
+  priceTakeaway Float // prix de vente TTC à emporter
+  order         Int                 @default(0) // ordre d'affichage au sein de sa catégorie, modifiable par glisser-déposer
+  ingredients   ProductIngredient[]
+  menuLinks     MenuItem[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
 }
 
 model Menu {
   id            String     @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   name          String
-  priceOnSite   Float      // prix de vente TTC sur place
-  priceTakeaway Float      // prix de vente TTC à emporter
+  priceOnSite   Float // prix de vente TTC sur place
+  priceTakeaway Float // prix de vente TTC à emporter
   order         Int        @default(0) // ordre d'affichage, modifiable par glisser-déposer
   items         MenuItem[]
   createdAt     DateTime   @default(now())
@@ -115,58 +190,64 @@ model ProductIngredient {
   product      Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
   ingredientId String
   ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
-  quantity     Float      // quantité dans quantityUnit
-  quantityUnit String     // "g" | "kg" | "mL" | "L" | "piece"
+  quantity     Float // quantité dans quantityUnit
+  quantityUnit String // "g" | "kg" | "mL" | "L" | "piece"
   channel      String     @default("BOTH") // "BOTH" | "SUR_PLACE" | "EMPORTER" — permet un coût de revient différent selon le mode de vente (emballages différents)
 }
 
 model Supplier {
   id            String         @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   name          String
-  category      String?        // catégorie libre regroupant les onglets fournisseurs (ex: "Boissons", "Mobilier")
+  category      String? // catégorie libre regroupant les onglets fournisseurs (ex: "Boissons", "Mobilier")
   order         Int            @default(0) // ordre d'affichage des sous-onglets, modifiable par glisser-déposer
-  orderSchedule String?        // jour/délai de commande et de livraison
-  minimumOrder  String?        // franco / minimum de commande
+  orderSchedule String? // jour/délai de commande et de livraison
+  minimumOrder  String? // franco / minimum de commande
   email         String?
   phone         String?
   clientCode    String?
-  notes         String?        // toute autre information libre
+  notes         String? // toute autre information libre
   items         SupplierItem[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
 
 model SupplierItem {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   supplierId    String
-  supplier      Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  order         Int      @default(0) // ordre d'affichage dans le tableau, modifiable par glisser-déposer
+  supplier      Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  order         Int       @default(0) // ordre d'affichage dans le tableau, modifiable par glisser-déposer
   reference     String?
   designation   String
-  category      String?  // sous-catégorie libre au sein du fournisseur (ex: "Boissons", "Emballages")
-  packaging     String?  // conditionnement
-  orderQuantity Float    @default(0) // quantité à commander
+  category      String? // sous-catégorie libre au sein du fournisseur (ex: "Boissons", "Emballages")
+  packaging     String? // conditionnement
+  orderQuantity Float     @default(0) // quantité à commander
   unitPriceHT   Float?
-  casePriceHT   Float?   // prix carton / colis / lot HT
+  casePriceHT   Float? // prix carton / colis / lot HT
   orderedAt     DateTime? // date à laquelle l'article a été commandé (vide = pas encore commandé)
   receivedAt    DateTime? // date à laquelle l'article a été reçu (vide = pas encore reçu)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 // Liste réutilisable de conditionnements (ex: "Carton de 12", "Lot de 6") proposée dans le formulaire article.
 model PackagingUnit {
-  id    String @id @default(cuid())
-  label String @unique
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  label        String
+
+  @@unique([restaurantId, label])
 }
 
 model Shift {
   id         String   @id @default(cuid())
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  date       String   // "YYYY-MM-DD"
-  startTime  String   // "HH:mm"
-  endTime    String   // "HH:mm"
+  date       String // "YYYY-MM-DD"
+  startTime  String // "HH:mm"
+  endTime    String // "HH:mm"
   createdAt  DateTime @default(now())
 }
 
@@ -174,9 +255,9 @@ model Absence {
   id         String   @id @default(cuid())
   employeeId String
   employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  startDate  String   // "YYYY-MM-DD"
-  endDate    String   // "YYYY-MM-DD"
-  type       String   // "CONGE_PAYE" | "MALADIE" | "AUTRE"
+  startDate  String // "YYYY-MM-DD"
+  endDate    String // "YYYY-MM-DD"
+  type       String // "CONGE_PAYE" | "MALADIE" | "AUTRE"
   status     String   @default("APPROVED") // "PENDING" | "APPROVED" | "REJECTED"
   note       String?
   createdAt  DateTime @default(now())
@@ -186,8 +267,10 @@ model Absence {
 // distinct des clients du quotidien qui ne sont pas suivis nommément.
 model CrmCompany {
   id            String           @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   name          String
-  sector        String?          // secteur d'activité
+  sector        String? // secteur d'activité
   address       String?
   phone         String?
   email         String?
@@ -200,10 +283,12 @@ model CrmCompany {
 
 model CrmContact {
   id            String           @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   companyId     String?
   company       CrmCompany?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
   name          String
-  role          String?          // fonction dans l'entreprise
+  role          String? // fonction dans l'entreprise
   phone         String?
   email         String?
   notes         String?
@@ -213,18 +298,20 @@ model CrmContact {
 }
 
 model CrmOpportunity {
-  id         String      @id @default(cuid())
-  title      String      // ex: "Séminaire annuel Société X"
-  companyId  String?
-  company    CrmCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  contactId  String?
-  contact    CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  stage      String      @default("PROSPECT") // "PROSPECT" | "DEVIS_ENVOYE" | "CONFIRME" | "REALISE" | "PERDU"
-  order      Int         @default(0) // ordre d'affichage au sein de sa colonne (kanban), modifiable par glisser-déposer
-  eventDate  String?     // "YYYY-MM-DD"
-  guestCount Int?
-  amount     Float?      // montant estimé / devis
-  notes      String?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id           String      @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  title        String // ex: "Séminaire annuel Société X"
+  companyId    String?
+  company      CrmCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId    String?
+  contact      CrmContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  stage        String      @default("PROSPECT") // "PROSPECT" | "DEVIS_ENVOYE" | "CONFIRME" | "REALISE" | "PERDU"
+  order        Int         @default(0) // ordre d'affichage au sein de sa colonne (kanban), modifiable par glisser-déposer
+  eventDate    String? // "YYYY-MM-DD"
+  guestCount   Int?
+  amount       Float? // montant estimé / devis
+  notes        String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
