@@ -13,6 +13,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Nav
         userId={user.sub}
         isAdmin={user.isSuperAdmin || user.activeRole === "ADMIN"}
+        isSuperAdmin={user.isSuperAdmin}
+        activeRestaurantId={user.activeRestaurantId}
+        restaurants={user.restaurants}
         username={user.username}
         canAccessMarges={user.activeCanAccessMarges}
         canAccessMercuriale={user.activeCanAccessMercuriale}

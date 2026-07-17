@@ -137,9 +137,13 @@ export async function buildSessionPayload(userId: string, preferredRestaurantId?
     }));
   }
 
+  // undefined = non spécifié (login) -> auto-sélection si un seul restaurant accessible.
+  // null explicite = demande volontaire de vue réseau (SUPER_ADMIN) -> pas d'auto-sélection.
+  // string = restaurant demandé -> utilisé s'il est accessible, sinon aucun restaurant actif.
   let activeRestaurantId: string | null = null;
-  if (preferredRestaurantId && restaurants.some((r) => r.id === preferredRestaurantId)) {
-    activeRestaurantId = preferredRestaurantId;
+  if (preferredRestaurantId !== undefined) {
+    activeRestaurantId =
+      preferredRestaurantId && restaurants.some((r) => r.id === preferredRestaurantId) ? preferredRestaurantId : null;
   } else if (restaurants.length === 1) {
     activeRestaurantId = restaurants[0].id;
   }

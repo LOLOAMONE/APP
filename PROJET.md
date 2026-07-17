@@ -24,7 +24,9 @@ L'application gère désormais plusieurs restaurants (marque Amoné avec maison 
 
 Migration des données existantes (SQLite mono-restaurant → multi-tenant) faite dans une seule migration Prisma auto-suffisante (`prisma/migrations/20260714110740_multi_tenant_restaurants`) : crée le restaurant "Amoné Nice", y rattache toutes les données préexistantes, convertit l'ancien `User.role`/`canAccessXxx` en `UserRestaurant`/`ModulePermission`. Un simple `prisma migrate deploy` suffit (pas d'étape manuelle), vérifié en la rejouant sur une copie de la base pré-migration.
 
-Gestion des comptes d'un restaurant dans Réglages → Utilisateurs (scopée au restaurant actif). **Pas encore construit** : sélecteur de restaurant dans l'UI, vue "bascule gérant" pour le SUPER_ADMIN, flux de création d'un nouveau restaurant, dashboard consolidé réseau.
+Gestion des comptes d'un restaurant dans Réglages → Utilisateurs (scopée au restaurant actif).
+
+**Vue réseau** (`/reseau`, SUPER_ADMIN uniquement) : sélecteur de restaurant dans la nav (visible dès qu'un compte a accès à plusieurs restaurants), bascule "Vue réseau" ⇄ "Mode gérant" sans reconnexion, `/reseau` liste tous les restaurants avec création d'un nouveau (pré-rempli avec une liste de base d'unités/conditionnements, modifiable ensuite sans impact sur les autres restaurants), `/reseau/utilisateurs` gère tous les comptes du réseau (statut super admin, rattachements à plusieurs restaurants avec rôle par restaurant, modules à portée globale). **Pas encore construit** : dashboard consolidé (chiffres agrégés tous restaurants).
 
 ## Fonctionnalités par section
 

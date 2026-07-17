@@ -9,6 +9,7 @@ const MARGES_PATHS = ["/marges", "/api/ingredients", "/api/products", "/api/menu
 const MERCURIALE_PATHS = ["/mercuriale", "/api/suppliers", "/api/supplier-items", "/api/packaging-units"];
 const CRM_PATHS = ["/clients", "/api/crm"];
 const USERS_PATHS = ["/api/users"];
+const SUPER_ADMIN_PATHS = ["/reseau", "/api/restaurants", "/api/super-admin"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -29,16 +30,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  // SUPER_ADMIN outrepasse tout, sans exception.
+  const deny = () =>
+    isApi
+      ? NextResponse.json({ error: "Accès interdit" }, { status: 403 })
+      : NextResponse.redirect(new URL("/planning", req.url));
+
+  if (SUPER_ADMIN_PATHS.some((p) => pathname.startsWith(p)) && !session.isSuperAdmin) {
+    return deny();
+  }
+
+  // SUPER_ADMIN outrepasse tout le reste, sans exception.
   if (session.isSuperAdmin) {
     return NextResponse.next();
   }
 
   const isLocalAdmin = session.activeRole === "ADMIN";
-  const deny = () =>
-    isApi
-      ? NextResponse.json({ error: "Accès interdit" }, { status: 403 })
-      : NextResponse.redirect(new URL("/planning", req.url));
 
   if (USERS_PATHS.some((p) => pathname.startsWith(p)) && !isLocalAdmin) {
     return deny();
