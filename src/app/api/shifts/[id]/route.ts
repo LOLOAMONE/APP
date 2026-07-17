@@ -16,7 +16,7 @@ const shiftSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
     const data = shiftSchema.parse(await req.json());
 
     if (data.endTime <= data.startTime) {
@@ -26,6 +26,11 @@ export const PUT = withErrorHandling(
       );
     }
 
+    const existing = await prisma.shift.findUnique({ where: { id: params.id }, include: { employee: true } });
+    if (!existing || existing.employee.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Créneau introuvable" }, { status: 404 });
+    }
+
     const shift = await prisma.shift.update({ where: { id: params.id }, data });
     return NextResponse.json(shift);
   }
@@ -33,7 +38,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const existing = await prisma.shift.findUnique({ where: { id: params.id }, include: { employee: true } });
+    if (!existing || existing.employee.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Créneau introuvable" }, { status: 404 });
+    }
     await prisma.shift.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

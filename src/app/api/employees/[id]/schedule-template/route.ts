@@ -20,7 +20,11 @@ const templateSchema = z.object({
 
 export const GET = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const employee = await prisma.employee.findUnique({ where: { id: params.id } });
+    if (!employee || employee.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
+    }
     const entries = await prisma.scheduleTemplateEntry.findMany({
       where: { employeeId: params.id },
       orderBy: { dayOfWeek: "asc" },
@@ -31,7 +35,11 @@ export const GET = withErrorHandling(
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const employee = await prisma.employee.findUnique({ where: { id: params.id } });
+    if (!employee || employee.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
+    }
     const data = templateSchema.parse(await req.json());
 
     for (const entry of data.entries) {

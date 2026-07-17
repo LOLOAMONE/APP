@@ -10,8 +10,12 @@ const updateSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
     const data = updateSchema.parse(await req.json());
+    const existing = await prisma.absence.findUnique({ where: { id: params.id }, include: { employee: true } });
+    if (!existing || existing.employee.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Absence introuvable" }, { status: 404 });
+    }
     const absence = await prisma.absence.update({ where: { id: params.id }, data });
     return NextResponse.json(absence);
   }
@@ -19,7 +23,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
+    const existing = await prisma.absence.findUnique({ where: { id: params.id }, include: { employee: true } });
+    if (!existing || existing.employee.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Absence introuvable" }, { status: 404 });
+    }
     await prisma.absence.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

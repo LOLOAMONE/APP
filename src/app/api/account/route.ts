@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireUser, hashPassword, verifyPassword } from "@/lib/auth";
+import { buildSessionPayload, requireUser, hashPassword, verifyPassword } from "@/lib/auth";
 import { createSessionToken, COOKIE_NAME, SESSION_DURATION_SECONDS } from "@/lib/session";
 import { withErrorHandling } from "@/lib/api";
 
@@ -35,15 +35,8 @@ export const PUT = withErrorHandling(async (req: NextRequest) => {
     },
   });
 
-  const token = await createSessionToken({
-    sub: updated.id,
-    username: updated.username,
-    role: updated.role as "ADMIN" | "EMPLOYEE",
-    employeeId: user.employee?.id ?? null,
-    canAccessMarges: updated.canAccessMarges,
-    canAccessMercuriale: updated.canAccessMercuriale,
-    canAccessCrm: updated.canAccessCrm,
-  });
+  const payload = await buildSessionPayload(updated.id, session.activeRestaurantId);
+  const token = await createSessionToken(payload);
 
   const res = NextResponse.json({ username: updated.username });
   res.cookies.set(COOKIE_NAME, token, {

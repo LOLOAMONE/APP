@@ -29,25 +29,36 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const isAdmin = session.role === "ADMIN";
+  // SUPER_ADMIN outrepasse tout, sans exception.
+  if (session.isSuperAdmin) {
+    return NextResponse.next();
+  }
+
+  const isLocalAdmin = session.activeRole === "ADMIN";
   const deny = () =>
     isApi
       ? NextResponse.json({ error: "Accès interdit" }, { status: 403 })
       : NextResponse.redirect(new URL("/planning", req.url));
 
-  if (USERS_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin) {
+  if (USERS_PATHS.some((p) => pathname.startsWith(p)) && !isLocalAdmin) {
     return deny();
   }
 
-  if (MARGES_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin && !session.canAccessMarges) {
+  const hasModuleAccess = (module: string, activeCanAccess: boolean) =>
+    isLocalAdmin || activeCanAccess || session.globalModules.includes(module);
+
+  if (MARGES_PATHS.some((p) => pathname.startsWith(p)) && !hasModuleAccess("marges", session.activeCanAccessMarges)) {
     return deny();
   }
 
-  if (MERCURIALE_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin && !session.canAccessMercuriale) {
+  if (
+    MERCURIALE_PATHS.some((p) => pathname.startsWith(p)) &&
+    !hasModuleAccess("mercuriale", session.activeCanAccessMercuriale)
+  ) {
     return deny();
   }
 
-  if (CRM_PATHS.some((p) => pathname.startsWith(p)) && !isAdmin && !session.canAccessCrm) {
+  if (CRM_PATHS.some((p) => pathname.startsWith(p)) && !hasModuleAccess("crm", session.activeCanAccessCrm)) {
     return deny();
   }
 

@@ -9,20 +9,25 @@ const unitSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  await requireMercurialeAccess();
-  const units = await prisma.packagingUnit.findMany({ orderBy: { label: "asc" } });
+  const session = await requireMercurialeAccess();
+  const units = await prisma.packagingUnit.findMany({
+    where: { restaurantId: session.activeRestaurantId },
+    orderBy: { label: "asc" },
+  });
   return NextResponse.json(units);
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireMercurialeAccess();
+  const session = await requireMercurialeAccess();
   const data = unitSchema.parse(await req.json());
 
-  const existing = await prisma.packagingUnit.findUnique({ where: { label: data.label } });
+  const existing = await prisma.packagingUnit.findUnique({
+    where: { restaurantId_label: { restaurantId: session.activeRestaurantId, label: data.label } },
+  });
   if (existing) {
     return NextResponse.json(existing, { status: 200 });
   }
 
-  const unit = await prisma.packagingUnit.create({ data });
+  const unit = await prisma.packagingUnit.create({ data: { ...data, restaurantId: session.activeRestaurantId } });
   return NextResponse.json(unit, { status: 201 });
 });

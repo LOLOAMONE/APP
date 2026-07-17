@@ -19,8 +19,9 @@ const opportunitySchema = z.object({
 const opportunityInclude = { company: true, contact: true } as const;
 
 export const GET = withErrorHandling(async () => {
-  await requireCrmAccess();
+  const session = await requireCrmAccess();
   const opportunities = await prisma.crmOpportunity.findMany({
+    where: { restaurantId: session.activeRestaurantId },
     orderBy: { order: "asc" },
     include: opportunityInclude,
   });
@@ -28,14 +29,14 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireCrmAccess();
+  const session = await requireCrmAccess();
   const data = opportunitySchema.parse(await req.json());
   const last = await prisma.crmOpportunity.findFirst({
-    where: { stage: data.stage },
+    where: { stage: data.stage, restaurantId: session.activeRestaurantId },
     orderBy: { order: "desc" },
   });
   const opportunity = await prisma.crmOpportunity.create({
-    data: { ...data, order: (last?.order ?? -1) + 1 },
+    data: { ...data, restaurantId: session.activeRestaurantId, order: (last?.order ?? -1) + 1 },
     include: opportunityInclude,
   });
   return NextResponse.json(opportunity, { status: 201 });

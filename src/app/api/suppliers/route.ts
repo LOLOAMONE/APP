@@ -16,8 +16,9 @@ const supplierSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  await requireMercurialeAccess();
+  const session = await requireMercurialeAccess();
   const suppliers = await prisma.supplier.findMany({
+    where: { restaurantId: session.activeRestaurantId },
     orderBy: { order: "asc" },
     include: { items: { orderBy: { order: "asc" } } },
   });
@@ -25,11 +26,14 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireMercurialeAccess();
+  const session = await requireMercurialeAccess();
   const data = supplierSchema.parse(await req.json());
-  const last = await prisma.supplier.findFirst({ orderBy: { order: "desc" } });
+  const last = await prisma.supplier.findFirst({
+    where: { restaurantId: session.activeRestaurantId },
+    orderBy: { order: "desc" },
+  });
   const supplier = await prisma.supplier.create({
-    data: { ...data, order: (last?.order ?? -1) + 1 },
+    data: { ...data, restaurantId: session.activeRestaurantId, order: (last?.order ?? -1) + 1 },
     include: { items: true },
   });
   return NextResponse.json(supplier, { status: 201 });

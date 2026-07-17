@@ -23,25 +23,52 @@ export const PUT = withErrorHandling(
       );
     }
 
-    const user = await prisma.user.update({
-      where: { id: params.id },
-      data: {
-        role: data.role,
-        canAccessMarges: data.canAccessMarges,
-        canAccessMercuriale: data.canAccessMercuriale,
-        canAccessCrm: data.canAccessCrm,
-      },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        canAccessMarges: true,
-        canAccessMercuriale: true,
-        canAccessCrm: true,
-        employee: { select: { id: true, name: true, position: true } },
-      },
+    const membership = await prisma.userRestaurant.findUnique({
+      where: { userId_restaurantId: { userId: params.id, restaurantId: session.activeRestaurantId } },
+    });
+    if (!membership) {
+      return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+    }
+
+    const grantedModules = (
+      [
+        ["marges", data.canAccessMarges],
+        ["mercuriale", data.canAccessMercuriale],
+        ["crm", data.canAccessCrm],
+      ] as [string, boolean][]
+    )
+      .filter(([, granted]) => granted && data.role !== "ADMIN")
+      .map(([module]) => module);
+
+    const user = await prisma.$transaction(async (tx) => {
+      await tx.userRestaurant.update({
+        where: { userId_restaurantId: { userId: params.id, restaurantId: session.activeRestaurantId } },
+        data: { role: data.role },
+      });
+      await tx.modulePermission.deleteMany({ where: { userId: params.id, restaurantId: session.activeRestaurantId } });
+      if (grantedModules.length > 0) {
+        await tx.modulePermission.createMany({
+          data: grantedModules.map((module) => ({
+            userId: params.id,
+            module,
+            restaurantId: session.activeRestaurantId,
+          })),
+        });
+      }
+      return tx.user.findUniqueOrThrow({
+        where: { id: params.id },
+        include: { employee: { select: { id: true, name: true, position: true } } },
+      });
     });
 
-    return NextResponse.json(user);
+    return NextResponse.json({
+      id: user.id,
+      username: user.username,
+      role: data.role,
+      canAccessMarges: data.role === "ADMIN" || data.canAccessMarges,
+      canAccessMercuriale: data.role === "ADMIN" || data.canAccessMercuriale,
+      canAccessCrm: data.role === "ADMIN" || data.canAccessCrm,
+      employee: user.employee,
+    });
   }
 );

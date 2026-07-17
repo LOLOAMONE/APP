@@ -17,8 +17,12 @@ const supplierSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMercurialeAccess();
+    const session = await requireMercurialeAccess();
     const data = supplierSchema.parse(await req.json());
+    const existing = await prisma.supplier.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Fournisseur introuvable" }, { status: 404 });
+    }
     const supplier = await prisma.supplier.update({ where: { id: params.id }, data });
     return NextResponse.json(supplier);
   }
@@ -26,7 +30,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMercurialeAccess();
+    const session = await requireMercurialeAccess();
+    const existing = await prisma.supplier.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Fournisseur introuvable" }, { status: 404 });
+    }
     await prisma.supplier.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

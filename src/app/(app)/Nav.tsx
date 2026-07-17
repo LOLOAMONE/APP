@@ -8,20 +8,19 @@ import { SettingsModal } from "./SettingsModal";
 
 type NavProps = {
   userId: string;
-  role: string;
+  isAdmin: boolean;
   username: string;
   canAccessMarges: boolean;
   canAccessMercuriale: boolean;
   canAccessCrm: boolean;
 };
 
-export function Nav({ userId, role, username, canAccessMarges, canAccessMercuriale, canAccessCrm }: NavProps) {
+export function Nav({ userId, isAdmin, username, canAccessMarges, canAccessMercuriale, canAccessCrm }: NavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const isAdmin = role === "ADMIN";
   const TABS = [
     { href: "/marges", label: "Marges", visible: isAdmin || canAccessMarges },
     { href: "/mercuriale", label: "Mercuriale", visible: isAdmin || canAccessMercuriale },

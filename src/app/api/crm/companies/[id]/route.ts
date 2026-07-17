@@ -15,8 +15,12 @@ const companySchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireCrmAccess();
+    const session = await requireCrmAccess();
     const data = companySchema.parse(await req.json());
+    const existing = await prisma.crmCompany.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Entreprise introuvable" }, { status: 404 });
+    }
     const company = await prisma.crmCompany.update({ where: { id: params.id }, data });
     return NextResponse.json(company);
   }
@@ -24,7 +28,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireCrmAccess();
+    const session = await requireCrmAccess();
+    const existing = await prisma.crmCompany.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Entreprise introuvable" }, { status: 404 });
+    }
     await prisma.crmCompany.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

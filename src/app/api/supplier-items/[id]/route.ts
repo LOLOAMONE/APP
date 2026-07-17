@@ -18,7 +18,11 @@ const itemSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMercurialeAccess();
+    const session = await requireMercurialeAccess();
+    const existing = await prisma.supplierItem.findUnique({ where: { id: params.id }, include: { supplier: true } });
+    if (!existing || existing.supplier.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
+    }
     const data = itemSchema.parse(await req.json());
     const item = await prisma.supplierItem.update({
       where: { id: params.id },
@@ -34,7 +38,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMercurialeAccess();
+    const session = await requireMercurialeAccess();
+    const existing = await prisma.supplierItem.findUnique({ where: { id: params.id }, include: { supplier: true } });
+    if (!existing || existing.supplier.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
+    }
     await prisma.supplierItem.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

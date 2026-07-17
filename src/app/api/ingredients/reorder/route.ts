@@ -9,10 +9,17 @@ const reorderSchema = z.object({
 });
 
 export const PUT = withErrorHandling(async (req: NextRequest) => {
-  await requireMargesAccess();
+  const session = await requireMargesAccess();
   const { ids } = reorderSchema.parse(await req.json());
 
-  await prisma.$transaction(ids.map((id, index) => prisma.ingredient.update({ where: { id }, data: { order: index } })));
+  await prisma.$transaction(
+    ids.map((id, index) =>
+      prisma.ingredient.updateMany({
+        where: { id, restaurantId: session.activeRestaurantId },
+        data: { order: index },
+      })
+    )
+  );
 
   return NextResponse.json({ ok: true });
 });

@@ -6,5 +6,10 @@ export default async function PlanningPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  return <PlanningClient role={user.role} employeeId={user.employeeId} />;
+  return (
+    <PlanningClient
+      isAdmin={user.isSuperAdmin || user.activeRole === "ADMIN"}
+      employeeId={user.employeeId}
+    />
+  );
 }

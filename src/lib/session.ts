@@ -1,13 +1,29 @@
 import { SignJWT, jwtVerify } from "jose";
 
+export type RestaurantMembershipSummary = {
+  id: string;
+  name: string;
+  role: "ADMIN" | "EMPLOYEE";
+};
+
 export type SessionPayload = {
   sub: string; // userId
   username: string;
-  role: "ADMIN" | "EMPLOYEE";
-  employeeId: string | null;
-  canAccessMarges: boolean;
-  canAccessMercuriale: boolean;
-  canAccessCrm: boolean;
+  isSuperAdmin: boolean;
+  employeeId: string | null; // Employee de l'utilisateur sur activeRestaurantId, si applicable
+
+  // Contexte "restaurant actif" — pilote quelles données sont affichées/modifiées.
+  activeRestaurantId: string | null;
+  activeRole: "ADMIN" | "EMPLOYEE" | null; // rôle local sur activeRestaurantId (null si aucun restaurant actif)
+  activeCanAccessMarges: boolean;
+  activeCanAccessMercuriale: boolean;
+  activeCanAccessCrm: boolean;
+
+  // Modules accordés à portée globale (tous les restaurants), ex: ["marketing"].
+  globalModules: string[];
+
+  // Restaurants accessibles à cet utilisateur, pour le sélecteur de contexte.
+  restaurants: RestaurantMembershipSummary[];
 };
 
 const COOKIE_NAME = "session";

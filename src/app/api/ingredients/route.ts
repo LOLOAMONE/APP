@@ -13,21 +13,26 @@ const ingredientSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  await requireMargesAccess();
+  const session = await requireMargesAccess();
   const ingredients = await prisma.ingredient.findMany({
+    where: { restaurantId: session.activeRestaurantId },
     orderBy: { order: "asc" },
   });
   return NextResponse.json(ingredients);
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireMargesAccess();
+  const session = await requireMargesAccess();
   const data = ingredientSchema.parse(await req.json());
 
-  const last = await prisma.ingredient.findFirst({ orderBy: { order: "desc" } });
+  const last = await prisma.ingredient.findFirst({
+    where: { restaurantId: session.activeRestaurantId },
+    orderBy: { order: "desc" },
+  });
   const ingredient = await prisma.ingredient.create({
     data: {
       ...data,
+      restaurantId: session.activeRestaurantId,
       order: (last?.order ?? -1) + 1,
       priceHistory: { create: { price: data.price } },
     },

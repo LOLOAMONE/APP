@@ -9,20 +9,25 @@ const unitSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  await requireMargesAccess();
-  const units = await prisma.measureUnit.findMany({ orderBy: { label: "asc" } });
+  const session = await requireMargesAccess();
+  const units = await prisma.measureUnit.findMany({
+    where: { restaurantId: session.activeRestaurantId },
+    orderBy: { label: "asc" },
+  });
   return NextResponse.json(units);
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireMargesAccess();
+  const session = await requireMargesAccess();
   const data = unitSchema.parse(await req.json());
 
-  const existing = await prisma.measureUnit.findUnique({ where: { label: data.label } });
+  const existing = await prisma.measureUnit.findUnique({
+    where: { restaurantId_label: { restaurantId: session.activeRestaurantId, label: data.label } },
+  });
   if (existing) {
     return NextResponse.json(existing, { status: 200 });
   }
 
-  const unit = await prisma.measureUnit.create({ data });
+  const unit = await prisma.measureUnit.create({ data: { ...data, restaurantId: session.activeRestaurantId } });
   return NextResponse.json(unit, { status: 201 });
 });

@@ -24,8 +24,13 @@ const menuInclude = {
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
     const data = menuSchema.parse(await req.json());
+
+    const existing = await prisma.menu.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Menu introuvable" }, { status: 404 });
+    }
 
     const menu = await prisma.$transaction(async (tx) => {
       await tx.menuItem.deleteMany({ where: { menuId: params.id } });
@@ -47,7 +52,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
+    const existing = await prisma.menu.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Menu introuvable" }, { status: 404 });
+    }
     await prisma.menu.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

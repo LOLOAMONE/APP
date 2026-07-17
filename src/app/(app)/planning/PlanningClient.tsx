@@ -39,13 +39,12 @@ const ABSENCE_COLORS: Record<string, string> = {
 };
 
 export function PlanningClient({
-  role,
+  isAdmin,
   employeeId,
 }: {
-  role: "ADMIN" | "EMPLOYEE";
+  isAdmin: boolean;
   employeeId: string | null;
 }) {
-  const isAdmin = role === "ADMIN";
 
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
   const weekDays = useMemo(() => getWeekDays(weekStart), [weekStart]);

@@ -6,5 +6,5 @@ export default async function HomePage() {
   if (!user) {
     redirect("/login");
   }
-  redirect(user.role === "ADMIN" ? "/marges" : "/planning");
+  redirect(user.isSuperAdmin || user.activeRole === "ADMIN" ? "/marges" : "/planning");
 }

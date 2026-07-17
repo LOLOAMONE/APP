@@ -15,11 +15,11 @@ const ingredientSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
     const data = ingredientSchema.parse(await req.json());
 
     const existing = await prisma.ingredient.findUnique({ where: { id: params.id } });
-    if (!existing) {
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
       return NextResponse.json({ error: "Ingrédient introuvable" }, { status: 404 });
     }
 
@@ -39,7 +39,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
+    const existing = await prisma.ingredient.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Ingrédient introuvable" }, { status: 404 });
+    }
     try {
       await prisma.ingredient.delete({ where: { id: params.id } });
     } catch (err) {

@@ -15,6 +15,9 @@ export function withErrorHandling<T extends unknown[]>(
       if (err instanceof Error && err.message === "FORBIDDEN") {
         return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
       }
+      if (err instanceof Error && err.message === "NO_ACTIVE_RESTAURANT") {
+        return NextResponse.json({ error: "Aucun restaurant actif sélectionné" }, { status: 409 });
+      }
       if (err instanceof ZodError) {
         return NextResponse.json(
           { error: "Données invalides", details: err.flatten() },

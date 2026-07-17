@@ -10,8 +10,12 @@ const unitSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
     const data = unitSchema.parse(await req.json());
+    const existing = await prisma.measureUnit.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Unité introuvable" }, { status: 404 });
+    }
     const unit = await prisma.measureUnit.update({ where: { id: params.id }, data });
     return NextResponse.json(unit);
   }
@@ -19,7 +23,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
+    const existing = await prisma.measureUnit.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Unité introuvable" }, { status: 404 });
+    }
     await prisma.measureUnit.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

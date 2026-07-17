@@ -16,7 +16,11 @@ const itemSchema = z.object({
 
 export const POST = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMercurialeAccess();
+    const session = await requireMercurialeAccess();
+    const supplier = await prisma.supplier.findUnique({ where: { id: params.id } });
+    if (!supplier || supplier.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Fournisseur introuvable" }, { status: 404 });
+    }
     const data = itemSchema.parse(await req.json());
     const last = await prisma.supplierItem.findFirst({
       where: { supplierId: params.id },

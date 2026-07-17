@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAdmin, requireUser } from "@/lib/auth";
+import { requireActiveRestaurant, requireAdmin } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -15,16 +15,16 @@ const shiftSchema = z.object({
 });
 
 export const GET = withErrorHandling(async (req: NextRequest) => {
-  await requireUser();
+  const session = await requireActiveRestaurant();
   const { searchParams } = new URL(req.url);
   const start = searchParams.get("start");
   const end = searchParams.get("end");
 
   const shifts = await prisma.shift.findMany({
-    where:
-      start && end
-        ? { date: { gte: start, lte: end } }
-        : undefined,
+    where: {
+      employee: { restaurantId: session.activeRestaurantId },
+      ...(start && end ? { date: { gte: start, lte: end } } : {}),
+    },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
@@ -32,7 +32,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireAdmin();
+  const session = await requireAdmin();
   const data = shiftSchema.parse(await req.json());
 
   if (data.endTime <= data.startTime) {
@@ -40,6 +40,11 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       { error: "L'heure de fin doit être après l'heure de début" },
       { status: 400 }
     );
+  }
+
+  const employee = await prisma.employee.findUnique({ where: { id: data.employeeId } });
+  if (!employee || employee.restaurantId !== session.activeRestaurantId) {
+    return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
   }
 
   const shift = await prisma.shift.create({ data });

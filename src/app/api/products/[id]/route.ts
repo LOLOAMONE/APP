@@ -24,8 +24,13 @@ const productSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
     const data = productSchema.parse(await req.json());
+
+    const existing = await prisma.product.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+    }
 
     const product = await prisma.$transaction(async (tx) => {
       await tx.productIngredient.deleteMany({ where: { productId: params.id } });
@@ -55,7 +60,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMargesAccess();
+    const session = await requireMargesAccess();
+    const existing = await prisma.product.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
+    }
     await prisma.product.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

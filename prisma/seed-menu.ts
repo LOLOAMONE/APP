@@ -173,8 +173,8 @@ const productsData: {
   { name: "Vin blanc 75cl", category: "Alcool", priceOnSite: 22, priceTakeaway: 22, ingredients: singleLine("Vin blanc 75cl") },
 ];
 
-async function upsertIngredient(data: { name: string; unit: IngredientUnit; price: number }) {
-  const existing = await prisma.ingredient.findFirst({ where: { name: data.name } });
+async function upsertIngredient(restaurantId: string, data: { name: string; unit: IngredientUnit; price: number }) {
+  const existing = await prisma.ingredient.findFirst({ where: { restaurantId, name: data.name } });
   if (existing) {
     if (existing.price !== data.price || existing.unit !== data.unit) {
       await prisma.ingredient.update({
@@ -185,12 +185,13 @@ async function upsertIngredient(data: { name: string; unit: IngredientUnit; pric
     return existing.id;
   }
   const created = await prisma.ingredient.create({
-    data: { ...data, priceHistory: { create: { price: data.price } } },
+    data: { ...data, restaurantId, priceHistory: { create: { price: data.price } } },
   });
   return created.id;
 }
 
 async function upsertProduct(
+  restaurantId: string,
   data: (typeof productsData)[number],
   idByName: Record<string, string>
 ) {
@@ -201,7 +202,7 @@ async function upsertProduct(
     channel: i.channel,
   }));
 
-  const existing = await prisma.product.findFirst({ where: { name: data.name } });
+  const existing = await prisma.product.findFirst({ where: { restaurantId, name: data.name } });
   if (existing) {
     await prisma.productIngredient.deleteMany({ where: { productId: existing.id } });
     await prisma.product.update({
@@ -220,6 +221,7 @@ async function upsertProduct(
         category: data.category,
         priceOnSite: data.priceOnSite,
         priceTakeaway: data.priceTakeaway,
+        restaurantId,
         ingredients: { create: ingredients },
       },
     });
@@ -227,12 +229,18 @@ async function upsertProduct(
 }
 
 async function main() {
+  const restaurant = await prisma.restaurant.upsert({
+    where: { slug: "amone-nice" },
+    update: {},
+    create: { name: "Amoné Nice", slug: "amone-nice" },
+  });
+
   const idByName: Record<string, string> = {};
   for (const ing of ingredientsData) {
-    idByName[ing.name] = await upsertIngredient(ing);
+    idByName[ing.name] = await upsertIngredient(restaurant.id, ing);
   }
   for (const prod of productsData) {
-    await upsertProduct(prod, idByName);
+    await upsertProduct(restaurant.id, prod, idByName);
   }
   console.log(`Importé : ${ingredientsData.length} ingrédients, ${productsData.length} produits.`);
 }

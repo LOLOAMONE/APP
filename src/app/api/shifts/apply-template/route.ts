@@ -13,18 +13,20 @@ const applySchema = z.object({
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireAdmin();
+  const session = await requireAdmin();
   const { weekStart } = applySchema.parse(await req.json());
   const monday = parseISO(weekStart);
 
-  const entries = await prisma.scheduleTemplateEntry.findMany();
+  const entries = await prisma.scheduleTemplateEntry.findMany({
+    where: { employee: { restaurantId: session.activeRestaurantId } },
+  });
   if (entries.length === 0) {
     return NextResponse.json({ created: 0 });
   }
 
   const weekEnd = toISODate(addDays(monday, 6));
   const existingShifts = await prisma.shift.findMany({
-    where: { date: { gte: weekStart, lte: weekEnd } },
+    where: { date: { gte: weekStart, lte: weekEnd }, employee: { restaurantId: session.activeRestaurantId } },
     select: { employeeId: true, date: true },
   });
   const existingKeys = new Set(existingShifts.map((s) => `${s.employeeId}_${s.date}`));

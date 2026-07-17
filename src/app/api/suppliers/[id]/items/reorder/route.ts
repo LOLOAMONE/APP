@@ -10,7 +10,11 @@ const reorderSchema = z.object({
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireMercurialeAccess();
+    const session = await requireMercurialeAccess();
+    const supplier = await prisma.supplier.findUnique({ where: { id: params.id } });
+    if (!supplier || supplier.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Fournisseur introuvable" }, { status: 404 });
+    }
     const { ids } = reorderSchema.parse(await req.json());
 
     await prisma.$transaction(

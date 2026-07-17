@@ -4,7 +4,7 @@ import { EmployeesClient } from "./EmployeesClient";
 
 export default async function EmployesPage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "ADMIN") {
+  if (!user || !(user.isSuperAdmin || user.activeRole === "ADMIN")) {
     redirect("/planning");
   }
   return <EmployeesClient />;

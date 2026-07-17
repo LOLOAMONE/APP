@@ -1,6 +1,6 @@
 # Amoné Nice — Documentation du projet
 
-État du code au 2026-07-14. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
+État du code au 2026-07-17. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
 
 ## Stack technique
 
@@ -10,17 +10,21 @@
 - **Tailwind CSS** pour l'interface
 - Déployé sur un **VPS Hostinger** via PM2 + Nginx + Certbot (voir `README.md` pour les commandes de déploiement)
 
-## Comptes et permissions
+## Architecture multi-restaurants
 
-Un utilisateur (`User`) a un rôle (`ADMIN` ou `EMPLOYEE`) et des permissions par page :
+L'application gère désormais plusieurs restaurants (marque Amoné avec maison mère + franchises), pas uniquement Amoné Nice. Trois niveaux d'accès :
 
-- `role = ADMIN` : accès complet à tout, quelles que soient les cases cochées.
-- `role = EMPLOYEE` : accès au Planning uniquement par défaut, plus les pages activées individuellement :
-  - `canAccessMarges` — onglet Marges
-  - `canAccessMercuriale` — onglet Mercuriale
-  - `canAccessCrm` — onglet Clients
+1. **`User.isSuperAdmin`** — rôle global maison mère, indépendant de tout restaurant, outrepasse toutes les vérifications de permission. Bootstrap uniquement via `SUPER_ADMIN_USERNAME`/`SUPER_ADMIN_PASSWORD` au premier démarrage (jamais via l'UI pour le tout premier compte).
+2. **`UserRestaurant(userId, restaurantId, role)`** — rattachement d'un utilisateur à un restaurant avec un rôle **local** (`ADMIN` ou `EMPLOYEE`). Un même utilisateur peut avoir des lignes différentes (donc des rôles différents) sur plusieurs restaurants. Un `ADMIN` local a accès à tous les modules de son restaurant sans permission dédiée.
+3. **`ModulePermission(userId, module, restaurantId)`** — accès à un module précis (`"marges"` | `"mercuriale"` | `"crm"`, et futurs modules transverses comme `"marketing"`/`"ticketing"`), soit sur un restaurant précis, soit à portée **globale** (`restaurantId = null`) pour des comptes transverses réseau. Mécanisme générique et extensible : ajouter un futur module ne demande aucune migration de schéma, juste une nouvelle valeur de `module`.
 
-Ces permissions sont vérifiées à la fois côté middleware (blocage des routes) et côté API (chaque route appelle `requireXxxAccess()`). Gestion des comptes dans Réglages → Utilisateurs.
+**Session** : le JWT de session porte un `activeRestaurantId` (le restaurant actuellement affiché/édité), auto-sélectionné s'il n'y en a qu'un seul accessible. `POST /api/session/switch-restaurant` change ce contexte sans reconnexion. Ordre de vérification dans le middleware et dans chaque route API : `isSuperAdmin` → `ModulePermission` (locale ou globale) → rôle/permission local sur `activeRestaurantId`.
+
+**Données métier** : toutes les tables listées/créées indépendamment (Ingredient, Product, Menu, Supplier, Employee, CrmCompany, CrmContact, CrmOpportunity, MeasureUnit, PackagingUnit) portent un `restaurantId` obligatoire. Les tables enfants/jonction (IngredientPriceHistory, ProductIngredient, MenuItem, SupplierItem, Shift, Absence, ScheduleTemplateEntry) héritent du scope via leur parent.
+
+Migration des données existantes (SQLite mono-restaurant → multi-tenant) faite dans une seule migration Prisma auto-suffisante (`prisma/migrations/20260714110740_multi_tenant_restaurants`) : crée le restaurant "Amoné Nice", y rattache toutes les données préexistantes, convertit l'ancien `User.role`/`canAccessXxx` en `UserRestaurant`/`ModulePermission`. Un simple `prisma migrate deploy` suffit (pas d'étape manuelle), vérifié en la rejouant sur une copie de la base pré-migration.
+
+Gestion des comptes d'un restaurant dans Réglages → Utilisateurs (scopée au restaurant actif). **Pas encore construit** : sélecteur de restaurant dans l'UI, vue "bascule gérant" pour le SUPER_ADMIN, flux de création d'un nouveau restaurant, dashboard consolidé réseau.
 
 ## Fonctionnalités par section
 
@@ -62,8 +66,11 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 
 | Modèle | Rôle |
 |---|---|
-| `User` | Comptes + rôle + permissions par page |
-| `Employee` | Fiche employé, éventuellement liée à un `User` |
+| `Restaurant` | Un établissement du réseau (nom, slug, statut) |
+| `User` | Identité globale (login), plus `isSuperAdmin` |
+| `UserRestaurant` | Rattachement d'un `User` à un `Restaurant` + rôle local |
+| `ModulePermission` | Accès d'un `User` à un module, local ou à portée globale |
+| `Employee` | Fiche employé d'**un** restaurant, éventuellement liée à un `User` |
 | `ScheduleTemplateEntry` | Créneau récurrent du planning de base |
 | `Ingredient` / `MeasureUnit` / `IngredientPriceHistory` | Ingrédients, unités personnalisées, historique de prix |
 | `Product` / `ProductIngredient` | Produits vendus + composition en ingrédients |
@@ -74,7 +81,8 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 
 ## Ce qui n'existe pas encore (identifié dans les échanges précédents)
 
-- Migration **SQLite → PostgreSQL**, nécessaire avant une montée en charge significative (SQLite gère mal les écritures concurrentes).
+- **UI du multi-restaurants** : sélecteur de restaurant actif, vue "bascule gérant" pour le SUPER_ADMIN, écran de création d'un nouveau restaurant (schéma/API déjà en place, pas l'interface).
+- Migration **SQLite → PostgreSQL**, nécessaire avant une montée en charge significative (SQLite gère mal les écritures concurrentes — d'autant plus critique maintenant que plusieurs restaurants partagent le même fichier).
 - **Sauvegardes automatiques** de la base de données — aucune protection contre une perte de données aujourd'hui.
 - **Surveillance/alertes** du VPS (CPU, erreurs de verrouillage base de données).
 - **Application desktop** (Mac/Windows) via Tauri — coquille native pointant vers le site en ligne, pas de store requis.

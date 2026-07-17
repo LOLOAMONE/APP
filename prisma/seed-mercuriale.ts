@@ -374,7 +374,7 @@ const suppliers: SupplierData[] = [
   },
 ];
 
-async function upsertSupplier(data: SupplierData) {
+async function upsertSupplier(restaurantId: string, data: SupplierData) {
   const items = data.items.map(([reference, designation, packaging, orderQuantity, unitPriceHT, casePriceHT]) => ({
     reference,
     designation,
@@ -384,7 +384,7 @@ async function upsertSupplier(data: SupplierData) {
     casePriceHT,
   }));
 
-  const existing = await prisma.supplier.findFirst({ where: { name: data.name } });
+  const existing = await prisma.supplier.findFirst({ where: { restaurantId, name: data.name } });
   if (existing) {
     await prisma.supplierItem.deleteMany({ where: { supplierId: existing.id } });
     await prisma.supplier.update({
@@ -403,6 +403,7 @@ async function upsertSupplier(data: SupplierData) {
     await prisma.supplier.create({
       data: {
         name: data.name,
+        restaurantId,
         orderSchedule: data.orderSchedule,
         minimumOrder: data.minimumOrder,
         email: data.email,
@@ -416,9 +417,15 @@ async function upsertSupplier(data: SupplierData) {
 }
 
 async function main() {
+  const restaurant = await prisma.restaurant.upsert({
+    where: { slug: "amone-nice" },
+    update: {},
+    create: { name: "Amoné Nice", slug: "amone-nice" },
+  });
+
   let totalItems = 0;
   for (const supplier of suppliers) {
-    await upsertSupplier(supplier);
+    await upsertSupplier(restaurant.id, supplier);
     totalItems += supplier.items.length;
   }
   console.log(`Importé : ${suppliers.length} fournisseurs, ${totalItems} articles.`);

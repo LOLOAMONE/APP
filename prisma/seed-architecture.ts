@@ -87,7 +87,7 @@ const zones: ZoneData[] = [
   },
 ];
 
-async function upsertZone(data: ZoneData) {
+async function upsertZone(restaurantId: string, data: ZoneData) {
   const items = data.items.map(([reference, designation, orderQuantity, unitPriceHT]) => ({
     reference,
     designation,
@@ -97,7 +97,7 @@ async function upsertZone(data: ZoneData) {
     casePriceHT: null,
   }));
 
-  const existing = await prisma.supplier.findFirst({ where: { name: data.name } });
+  const existing = await prisma.supplier.findFirst({ where: { restaurantId, name: data.name } });
   if (existing) {
     await prisma.supplierItem.deleteMany({ where: { supplierId: existing.id } });
     await prisma.supplier.update({
@@ -105,10 +105,11 @@ async function upsertZone(data: ZoneData) {
       data: { notes: data.notes, items: { create: items } },
     });
   } else {
-    const last = await prisma.supplier.findFirst({ orderBy: { order: "desc" } });
+    const last = await prisma.supplier.findFirst({ where: { restaurantId }, orderBy: { order: "desc" } });
     await prisma.supplier.create({
       data: {
         name: data.name,
+        restaurantId,
         order: (last?.order ?? -1) + 1,
         notes: data.notes,
         items: { create: items },
@@ -118,9 +119,15 @@ async function upsertZone(data: ZoneData) {
 }
 
 async function main() {
+  const restaurant = await prisma.restaurant.upsert({
+    where: { slug: "amone-nice" },
+    update: {},
+    create: { name: "Amoné Nice", slug: "amone-nice" },
+  });
+
   let totalItems = 0;
   for (const zone of zones) {
-    await upsertZone(zone);
+    await upsertZone(restaurant.id, zone);
     totalItems += zone.items.length;
   }
   console.log(`Importé : ${zones.length} zones, ${totalItems} articles.`);

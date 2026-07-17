@@ -13,11 +13,16 @@ const reorderSchema = z.object({
 // Réordonne les cartes d'une colonne (et met à jour leur stage si une carte vient d'être
 // déposée dans une nouvelle colonne).
 export const PUT = withErrorHandling(async (req: NextRequest) => {
-  await requireCrmAccess();
+  const session = await requireCrmAccess();
   const { stage, ids } = reorderSchema.parse(await req.json());
 
   await prisma.$transaction(
-    ids.map((id, index) => prisma.crmOpportunity.update({ where: { id }, data: { order: index, stage } }))
+    ids.map((id, index) =>
+      prisma.crmOpportunity.updateMany({
+        where: { id, restaurantId: session.activeRestaurantId },
+        data: { order: index, stage },
+      })
+    )
   );
 
   return NextResponse.json({ ok: true });

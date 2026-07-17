@@ -12,11 +12,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen">
       <Nav
         userId={user.sub}
-        role={user.role}
+        isAdmin={user.isSuperAdmin || user.activeRole === "ADMIN"}
         username={user.username}
-        canAccessMarges={user.canAccessMarges}
-        canAccessMercuriale={user.canAccessMercuriale}
-        canAccessCrm={user.canAccessCrm}
+        canAccessMarges={user.activeCanAccessMarges}
+        canAccessMercuriale={user.activeCanAccessMercuriale}
+        canAccessCrm={user.activeCanAccessCrm}
       />
       <main className="w-full px-4 py-6 sm:px-6 lg:px-8">{children}</main>
     </div>

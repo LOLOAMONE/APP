@@ -20,8 +20,12 @@ const opportunityInclude = { company: true, contact: true } as const;
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireCrmAccess();
+    const session = await requireCrmAccess();
     const data = opportunitySchema.parse(await req.json());
+    const existing = await prisma.crmOpportunity.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
+    }
     const opportunity = await prisma.crmOpportunity.update({
       where: { id: params.id },
       data,
@@ -33,7 +37,11 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireCrmAccess();
+    const session = await requireCrmAccess();
+    const existing = await prisma.crmOpportunity.findUnique({ where: { id: params.id } });
+    if (!existing || existing.restaurantId !== session.activeRestaurantId) {
+      return NextResponse.json({ error: "Événement introuvable" }, { status: 404 });
+    }
     await prisma.crmOpportunity.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
   }

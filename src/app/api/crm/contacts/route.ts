@@ -14,8 +14,9 @@ const contactSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  await requireCrmAccess();
+  const session = await requireCrmAccess();
   const contacts = await prisma.crmContact.findMany({
+    where: { restaurantId: session.activeRestaurantId },
     orderBy: { name: "asc" },
     include: { company: true },
   });
@@ -23,8 +24,11 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireCrmAccess();
+  const session = await requireCrmAccess();
   const data = contactSchema.parse(await req.json());
-  const contact = await prisma.crmContact.create({ data, include: { company: true } });
+  const contact = await prisma.crmContact.create({
+    data: { ...data, restaurantId: session.activeRestaurantId },
+    include: { company: true },
+  });
   return NextResponse.json(contact, { status: 201 });
 });

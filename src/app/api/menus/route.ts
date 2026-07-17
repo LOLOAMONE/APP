@@ -40,8 +40,9 @@ const menuInclude = {
 } as const;
 
 export const GET = withErrorHandling(async () => {
-  await requireMargesAccess();
+  const session = await requireMargesAccess();
   const menus = await prisma.menu.findMany({
+    where: { restaurantId: session.activeRestaurantId },
     orderBy: { order: "asc" },
     include: menuInclude,
   });
@@ -49,15 +50,19 @@ export const GET = withErrorHandling(async () => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  await requireMargesAccess();
+  const session = await requireMargesAccess();
   const data = menuSchema.parse(await req.json());
 
-  const last = await prisma.menu.findFirst({ orderBy: { order: "desc" } });
+  const last = await prisma.menu.findFirst({
+    where: { restaurantId: session.activeRestaurantId },
+    orderBy: { order: "desc" },
+  });
   const menu = await prisma.menu.create({
     data: {
       name: data.name,
       priceOnSite: data.priceOnSite,
       priceTakeaway: data.priceTakeaway,
+      restaurantId: session.activeRestaurantId,
       order: (last?.order ?? -1) + 1,
       items: { create: data.items.map((i) => ({ productId: i.productId, quantity: i.quantity })) },
     },

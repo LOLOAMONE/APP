@@ -14,25 +14,26 @@ const updateEmployeeSchema = z.object({
 
 export const GET = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
     const employee = await prisma.employee.findUnique({
       where: { id: params.id },
-      select: { id: true, name: true, position: true, hourlyRate: true, userId: true },
+      select: { id: true, name: true, position: true, hourlyRate: true, userId: true, restaurantId: true },
     });
-    if (!employee) {
+    if (!employee || employee.restaurantId !== session.activeRestaurantId) {
       return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
     }
-    return NextResponse.json(employee);
+    const { restaurantId: _restaurantId, ...rest } = employee;
+    return NextResponse.json(rest);
   }
 );
 
 export const PUT = withErrorHandling(
   async (req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
     const data = updateEmployeeSchema.parse(await req.json());
 
     const employee = await prisma.employee.findUnique({ where: { id: params.id } });
-    if (!employee) {
+    if (!employee || employee.restaurantId !== session.activeRestaurantId) {
       return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
     }
 
@@ -70,10 +71,10 @@ export const PUT = withErrorHandling(
 
 export const DELETE = withErrorHandling(
   async (_req: NextRequest, { params }: { params: { id: string } }) => {
-    await requireAdmin();
+    const session = await requireAdmin();
 
     const employee = await prisma.employee.findUnique({ where: { id: params.id } });
-    if (!employee) {
+    if (!employee || employee.restaurantId !== session.activeRestaurantId) {
       return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
     }
 
