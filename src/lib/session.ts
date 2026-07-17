@@ -45,10 +45,19 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
     .sign(getSecretKey());
 }
 
+function isValidSessionPayload(payload: unknown): payload is SessionPayload {
+  if (!payload || typeof payload !== "object") return false;
+  const p = payload as Record<string, unknown>;
+  return Array.isArray(p.globalModules) && Array.isArray(p.restaurants);
+}
+
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    return payload as unknown as SessionPayload;
+    // Un cookie émis avant la migration multi-restaurants n'a pas ce format
+    // (ex: ancien User.role/canAccessXxx) — on force une reconnexion plutôt que de planter.
+    if (!isValidSessionPayload(payload)) return null;
+    return payload;
   } catch {
     return null;
   }
