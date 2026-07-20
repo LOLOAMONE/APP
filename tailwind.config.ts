@@ -33,6 +33,18 @@ const config: Config = {
           900: "#47391f",
         },
       },
+      // Design system Bento : rayons/ombres réutilisables pour les blocs/cartes
+      // (sidebar, futurs dashboard et écrans de pilotage réseau). Les gutters entre
+      // blocs suivent l'échelle Tailwind standard (gap-5/p-5 = 20px, gap-6/p-6 = 24px
+      // pour de plus grandes cartes) — pas de token dédié, l'échelle par défaut suffit.
+      borderRadius: {
+        bento: "1.25rem", // 20px — cartes/blocs Bento
+        "bento-sm": "0.875rem", // 14px — items internes (nav item, petites cartes)
+      },
+      boxShadow: {
+        bento: "0 1px 2px rgba(16,24,40,0.04), 0 4px 12px rgba(16,24,40,0.06)",
+        "bento-hover": "0 2px 4px rgba(16,24,40,0.06), 0 8px 24px rgba(16,24,40,0.08)",
+      },
     },
   },
   plugins: [],
