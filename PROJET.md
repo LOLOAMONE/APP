@@ -1,6 +1,6 @@
 # Amoné Nice — Documentation du projet
 
-État du code au 2026-07-17. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
+État du code au 2026-07-20. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
 
 ## Stack technique
 
@@ -64,6 +64,15 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 - **Modèle hebdomadaire** — créneaux récurrents édités depuis la fiche employé, applicables en un clic (bouton "Appliquer le planning de base" dans `/planning`) pour générer la semaine.
 - **Absences** — congés/maladie avec statut (en attente / approuvé / refusé), workflow de validation pour les demandes des employés.
 
+### Tickets (`/tickets`) et Canaux (`/canaux`)
+
+Premier module transverse construit sur l'architecture multi-restaurants (réutilise `ModulePermission`, pas de système de permissions parallèle) :
+
+- **Tickets** — demandes d'un restaurant vers la maison mère, remplaçant l'email. Chaque `Ticket` (sujet, description initiale, statut `OPEN`/`IN_PROGRESS`/`RESOLVED`/`CLOSED`, catégorie libre, restaurant d'origine, auteur) a son fil de discussion (`TicketMessage`, horodaté). Créable par **tout membre** du restaurant actif (pas de permission dédiée) ; le statut ne peut être changé que par la maison mère (`isSuperAdmin` ou `ModulePermission(module: "ticketing", restaurantId: null)` — rôle transverse, ex. équipe support sans être SUPER_ADMIN). La vue `/tickets` s'adapte automatiquement à la portée de l'utilisateur : agrégée tous restaurants (avec filtres statut/restaurant) pour la portée globale, limitée au restaurant actif sinon — un seul endpoint (`GET /api/tickets`), pas deux vues séparées.
+- **Canaux** — communication interne façon Slack, **indépendante** des tickets, scopée au restaurant actif uniquement (pas d'agrégation réseau). Chaque restaurant reçoit un canal "Général" par défaut à sa création (`POST /api/restaurants`) ; tout membre peut créer d'autres canaux par sujet. `Channel`/`ChannelMessage`, ouverts à tout membre du restaurant.
+- Rafraîchissement des fils par polling simple (`usePolling`, ~6-15s selon le contexte, en pause quand l'onglet n'est pas visible) — pas de WebSocket/SSE pour cette première itération.
+- Nav : "Tickets" et "Canaux" visibles à tout membre en vue restaurant ; "Tickets" apparaît aussi en vue réseau pour les comptes à portée globale (SUPER_ADMIN ou rôle transverse "ticketing").
+
 ## Modèles de données (Prisma)
 
 | Modèle | Rôle |
@@ -80,10 +89,11 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 | `Supplier` / `SupplierItem` / `PackagingUnit` | Mercuriale (fournisseurs, articles, conditionnements) |
 | `Shift` / `Absence` | Planning et congés |
 | `CrmCompany` / `CrmContact` / `CrmOpportunity` | CRM entreprises/événements |
+| `Ticket` / `TicketMessage` | Demandes d'un restaurant vers la maison mère + fil de discussion |
+| `Channel` / `ChannelMessage` | Canaux internes par restaurant + fil de messages |
 
 ## Ce qui n'existe pas encore (identifié dans les échanges précédents)
 
-- **UI du multi-restaurants** : sélecteur de restaurant actif, vue "bascule gérant" pour le SUPER_ADMIN, écran de création d'un nouveau restaurant (schéma/API déjà en place, pas l'interface).
 - Migration **SQLite → PostgreSQL**, nécessaire avant une montée en charge significative (SQLite gère mal les écritures concurrentes — d'autant plus critique maintenant que plusieurs restaurants partagent le même fichier).
 - **Sauvegardes automatiques** de la base de données — aucune protection contre une perte de données aujourd'hui.
 - **Surveillance/alertes** du VPS (CPU, erreurs de verrouillage base de données).
