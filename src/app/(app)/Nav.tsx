@@ -18,6 +18,7 @@ type NavProps = {
   canAccessMarges: boolean;
   canAccessMercuriale: boolean;
   canAccessCrm: boolean;
+  hasGlobalTicketAccess: boolean;
 };
 
 export function Nav({
@@ -30,6 +31,7 @@ export function Nav({
   canAccessMarges,
   canAccessMercuriale,
   canAccessCrm,
+  hasGlobalTicketAccess,
 }: NavProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -46,6 +48,8 @@ export function Nav({
     { href: "/mercuriale", label: "Mercuriale", visible: isAdmin || canAccessMercuriale },
     { href: "/clients", label: "Clients", visible: isAdmin || canAccessCrm },
     { href: "/planning", label: "Planning", visible: true },
+    { href: "/canaux", label: "Canaux", visible: true },
+    { href: "/tickets", label: "Tickets", visible: true },
   ];
   const visibleTabs = TABS.filter((tab) => tab.visible);
 
@@ -139,6 +143,16 @@ export function Nav({
                 >
                   Utilisateurs
                 </Link>
+                {hasGlobalTicketAccess && (
+                  <Link
+                    href="/tickets"
+                    className={`rounded-md px-3 py-2 text-sm font-medium transition ${
+                      pathname.startsWith("/tickets") ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    Tickets
+                  </Link>
+                )}
               </>
             ) : (
               visibleTabs.map((tab) => (
@@ -228,6 +242,17 @@ export function Nav({
                 >
                   Utilisateurs
                 </Link>
+                {hasGlobalTicketAccess && (
+                  <Link
+                    href="/tickets"
+                    onClick={() => setOpen(false)}
+                    className={`rounded-md px-3 py-2 text-sm font-medium ${
+                      pathname.startsWith("/tickets") ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    Tickets
+                  </Link>
+                )}
               </>
             ) : (
               visibleTabs.map((tab) => (

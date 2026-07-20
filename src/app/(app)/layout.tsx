@@ -20,6 +20,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canAccessMarges={user.activeCanAccessMarges}
         canAccessMercuriale={user.activeCanAccessMercuriale}
         canAccessCrm={user.activeCanAccessCrm}
+        hasGlobalTicketAccess={user.isSuperAdmin || user.globalModules.includes("ticketing")}
       />
       <main className="w-full px-4 py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
