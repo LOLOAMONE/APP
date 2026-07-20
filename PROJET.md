@@ -28,7 +28,17 @@ Gestion des comptes d'un restaurant dans Réglages → Utilisateurs (scopée au 
 
 **Vue réseau** (`/reseau`, SUPER_ADMIN uniquement) : sélecteur de restaurant dans la nav (visible dès qu'un compte a accès à plusieurs restaurants), bascule "Vue réseau" ⇄ "Mode gérant" sans reconnexion, `/reseau` liste tous les restaurants avec création d'un nouveau (pré-rempli avec une liste de base d'unités/conditionnements, modifiable ensuite sans impact sur les autres restaurants), `/reseau/utilisateurs` gère tous les comptes du réseau (statut super admin, rattachements à plusieurs restaurants avec rôle par restaurant, modules à portée globale). **Pas encore construit** : dashboard consolidé (chiffres agrégés tous restaurants).
 
+## Navigation et design system
+
+**Sidebar verticale** (`Sidebar.tsx`) remplace l'ancienne nav horizontale : colonne fixe à gauche sur desktop (256px, sticky), top bar + drawer réutilisant le même contenu sur mobile. Sélecteur de restaurant et bascule "vue gérant" en haut, Réglages/Déconnexion en bas. Logique de permissions inchangée (`visibleTabs`, `canAccessXxx`).
+
+**Design system Bento** — tokens Tailwind réutilisables pour tous les blocs/cartes : `rounded-bento` (20px, blocs), `rounded-bento-sm` (14px, items internes), `shadow-bento`/`shadow-bento-hover` (ombre douce, pas de bordure visible). Gutters sur l'échelle Tailwind standard (`gap-5`/`p-5`, `gap-6`/`p-6`), pas de token dédié. Appliqué à la sidebar et au tableau de bord ; les autres écrans seront migrés au fil des prochains chantiers.
+
 ## Fonctionnalités par section
+
+### Tableau de bord (`/dashboard`)
+
+Page d'accueil personnalisable, scopée au restaurant actif. Catalogue de widgets défini dans le code (`src/lib/dashboard.ts`) — résumé du jour (créneaux + absences en attente), chiffres clés (tickets ouverts, articles à commander, publications en attente de validation), raccourcis vers les sections accessibles. `DashboardWidget` ne stocke que ce qu'un utilisateur a personnalisé (ordre, visibilité) par utilisateur + restaurant ; un widget jamais touché utilise les valeurs par défaut du catalogue — ajouter un widget plus tard ne demande aucune migration. Réordonnancement par glisser-déposer (HTML5 natif, même pattern que Ingrédients/Produits), masquage individuel via le panneau "Personnaliser".
 
 ### Marges (`/marges`)
 
@@ -73,6 +83,14 @@ Premier module transverse construit sur l'architecture multi-restaurants (réuti
 - Rafraîchissement des fils par polling simple (`usePolling`, ~6-15s selon le contexte, en pause quand l'onglet n'est pas visible) — pas de WebSocket/SSE pour cette première itération.
 - Nav : "Tickets" et "Canaux" visibles à tout membre en vue restaurant ; "Tickets" apparaît aussi en vue réseau pour les comptes à portée globale (SUPER_ADMIN ou rôle transverse "ticketing").
 
+### Marketing (`/marketing`)
+
+Deuxième module transverse (réutilise `ModulePermission("marketing")`, comme "ticketing") — mais accès local réservé à l'ADMIN ou à une permission explicite (comme Marges/Mercuriale/Crm), pas ouvert à tout employé : données clients/budget plus sensibles.
+
+- **Campagnes** (`/marketing/campagnes`) — nationales (`Campaign.scope = "NATIONAL"`, restaurantId null, créées par la maison mère, ciblage optionnel d'une sélection de restaurants via `CampaignRestaurant`) ou locales (créées par un gérant, son propre budget), non modifiables par les franchisés si nationales. Coupons (`Coupon`) avec suivi d'utilisation réelle (`CouponRedemption`, plafond de redemptions, expiration) — lien Popina prévu mais non branché (champ `source`).
+- **Calendrier éditorial** (`/marketing/calendrier`) — pense-bête partagé de publications à venir (`EditorialPost`) : titre, légende, lien externe vers le média (Drive/OneDrive — l'app n'héberge aucun fichier), plateformes visées à titre indicatif, date programmée. Validation optionnelle par la maison mère (statuts `DRAFT` → `PENDING_VALIDATION` → `VALIDATED`/`REJECTED` → `PUBLISHED`, marqué manuellement). **Aucune connexion aux réseaux sociaux ni publication automatique** — décision explicite pour cette itération.
+- CRM clients/fidélité unifié réseau (`Customer`, `CustomerVisit`, `LoyaltyLedgerEntry`) posé dans le schéma mais **non exposé par une API** — pas de source de données fiable identifiée (pas de caisse connectée), remis à plus tard.
+
 ## Modèles de données (Prisma)
 
 | Modèle | Rôle |
@@ -91,9 +109,16 @@ Premier module transverse construit sur l'architecture multi-restaurants (réuti
 | `CrmCompany` / `CrmContact` / `CrmOpportunity` | CRM entreprises/événements |
 | `Ticket` / `TicketMessage` | Demandes d'un restaurant vers la maison mère + fil de discussion |
 | `Channel` / `ChannelMessage` | Canaux internes par restaurant + fil de messages |
+| `Campaign` / `CampaignRestaurant` / `Coupon` / `CouponRedemption` | Campagnes marketing national/local + coupons |
+| `EditorialPost` | Calendrier éditorial partagé (pense-bête, pas de publication auto) |
+| `Customer` / `CustomerVisit` / `LoyaltyLedgerEntry` | CRM fidélité réseau — posé, pas encore exposé par une API |
+| `DashboardWidget` | Personnalisation du tableau de bord (ordre/visibilité par utilisateur) |
+| `Page` | Notes hiérarchiques façon Notion — posé, pas encore exposé (prochaine étape) |
+| `Project` / `Task` / `TaskDependency` | Suivi de projet léger, pensé pour un futur Gantt (dépendances fin-à-début) — posé, pas encore exposé (prochaine étape) |
 
 ## Ce qui n'existe pas encore (identifié dans les échanges précédents)
 
+- **Espace Notes/Projets** (UI + API) — schéma posé (`Page`, `Project`, `Task`, `TaskDependency`), prochaine étape du chantier sidebar/dashboard.
 - Migration **SQLite → PostgreSQL**, nécessaire avant une montée en charge significative (SQLite gère mal les écritures concurrentes — d'autant plus critique maintenant que plusieurs restaurants partagent le même fichier).
 - **Sauvegardes automatiques** de la base de données — aucune protection contre une perte de données aujourd'hui.
 - **Surveillance/alertes** du VPS (CPU, erreurs de verrouillage base de données).
