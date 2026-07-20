@@ -22,8 +22,8 @@ export function SidebarNavItem({
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition ${
-        active ? "bg-brand-50 text-brand-700" : "text-gray-600 hover:bg-gray-100"
+      className={`flex items-center gap-3 rounded-bento-sm px-3 py-2.5 text-sm font-medium transition ${
+        active ? "bg-brand-50 text-brand-700 shadow-bento" : "text-gray-600 hover:bg-gray-50 hover:shadow-bento"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden />

@@ -118,7 +118,7 @@ export function Sidebar({
           </div>
         )}
 
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3">
           {(networkView ? visibleNetworkTabs : visibleTabs).map((tab) => (
             <SidebarNavItem key={tab.href} href={tab.href} label={tab.label} icon={tab.icon} onClick={onNavigate} />
           ))}
@@ -131,7 +131,7 @@ export function Sidebar({
                 switchRestaurant(null);
                 onNavigate?.();
               }}
-              className="w-full rounded-md bg-brand-50 px-3 py-2 text-left text-xs font-medium text-brand-700 hover:bg-brand-100"
+              className="w-full rounded-bento-sm bg-brand-50 px-3 py-2 text-left text-xs font-medium text-brand-700 hover:shadow-bento"
             >
               Mode gérant — Quitter
             </button>
@@ -142,7 +142,7 @@ export function Sidebar({
                 switchRestaurant(restaurants[0].id);
                 onNavigate?.();
               }}
-              className="w-full rounded-md bg-brand-50 px-3 py-2 text-left text-xs font-medium text-brand-700 hover:bg-brand-100"
+              className="w-full rounded-bento-sm bg-brand-50 px-3 py-2 text-left text-xs font-medium text-brand-700 hover:shadow-bento"
             >
               Entrer en mode gérant
             </button>
@@ -152,7 +152,7 @@ export function Sidebar({
             <div className="flex shrink-0 items-center gap-1">
               <button
                 onClick={() => setShowSettings(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100"
+                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-gray-500 hover:bg-gray-100"
                 aria-label="Réglages"
                 title="Réglages"
               >
@@ -160,7 +160,7 @@ export function Sidebar({
               </button>
               <button
                 onClick={handleLogout}
-                className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100"
+                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-gray-500 hover:bg-gray-100"
                 aria-label="Déconnexion"
                 title="Déconnexion"
               >
