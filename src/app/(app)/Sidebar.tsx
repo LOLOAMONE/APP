@@ -10,6 +10,7 @@ import {
   CalendarDays,
   Hash,
   LifeBuoy,
+  Megaphone,
   Store,
   UserCog,
   Settings,
@@ -33,7 +34,9 @@ type SidebarProps = {
   canAccessMarges: boolean;
   canAccessMercuriale: boolean;
   canAccessCrm: boolean;
+  canAccessMarketing: boolean;
   hasGlobalTicketAccess: boolean;
+  hasGlobalMarketingAccess: boolean;
 };
 
 export function Sidebar({
@@ -46,7 +49,9 @@ export function Sidebar({
   canAccessMarges,
   canAccessMercuriale,
   canAccessCrm,
+  canAccessMarketing,
   hasGlobalTicketAccess,
+  hasGlobalMarketingAccess,
 }: SidebarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -62,6 +67,7 @@ export function Sidebar({
     { href: "/planning", label: "Planning", icon: CalendarDays, visible: true },
     { href: "/canaux", label: "Canaux", icon: Hash, visible: true },
     { href: "/tickets", label: "Tickets", icon: LifeBuoy, visible: true },
+    { href: "/marketing", label: "Marketing", icon: Megaphone, visible: isAdmin || canAccessMarketing },
   ];
   const visibleTabs = TABS.filter((tab) => tab.visible);
 
@@ -69,6 +75,7 @@ export function Sidebar({
     { href: "/reseau", label: "Restaurants", icon: Store, visible: true },
     { href: "/reseau/utilisateurs", label: "Utilisateurs", icon: UserCog, visible: true },
     { href: "/tickets", label: "Tickets", icon: LifeBuoy, visible: hasGlobalTicketAccess },
+    { href: "/marketing", label: "Marketing", icon: Megaphone, visible: hasGlobalMarketingAccess },
   ];
   const visibleNetworkTabs = NETWORK_TABS.filter((tab) => tab.visible);
 
