@@ -10,6 +10,7 @@ type UserRow = {
   canAccessMarges: boolean;
   canAccessMercuriale: boolean;
   canAccessCrm: boolean;
+  canAccessMarketing: boolean;
   employee: { id: string; name: string; position: string } | null;
 };
 
@@ -20,6 +21,7 @@ const emptyForm = {
   canAccessMarges: false,
   canAccessMercuriale: false,
   canAccessCrm: false,
+  canAccessMarketing: false,
 };
 
 export function UsersTab({ currentUserId }: { currentUserId: string }) {
@@ -44,7 +46,10 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
     load();
   }, []);
 
-  async function updateUser(user: UserRow, patch: Partial<Pick<UserRow, "role" | "canAccessMarges" | "canAccessMercuriale" | "canAccessCrm">>) {
+  async function updateUser(
+    user: UserRow,
+    patch: Partial<Pick<UserRow, "role" | "canAccessMarges" | "canAccessMercuriale" | "canAccessCrm" | "canAccessMarketing">>
+  ) {
     setError(null);
     const next = { ...user, ...patch };
     setUsers((prev) => prev.map((u) => (u.id === user.id ? next : u)));
@@ -58,6 +63,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
           canAccessMarges: next.canAccessMarges,
           canAccessMercuriale: next.canAccessMercuriale,
           canAccessCrm: next.canAccessCrm,
+          canAccessMarketing: next.canAccessMarketing,
         }),
       });
       if (!res.ok) {
@@ -129,6 +135,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
               <th>Marges</th>
               <th>Mercuriale</th>
               <th>Clients</th>
+              <th>Marketing</th>
             </tr>
           </thead>
           <tbody>
@@ -176,11 +183,20 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
                     className="h-4 w-4"
                   />
                 </td>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={u.role === "ADMIN" ? true : u.canAccessMarketing}
+                    disabled={u.role === "ADMIN" || savingId === u.id}
+                    onChange={(e) => updateUser(u, { canAccessMarketing: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                </td>
               </tr>
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-6 text-center text-gray-400">
+                <td colSpan={6} className="py-6 text-center text-gray-400">
                   Aucun utilisateur
                 </td>
               </tr>
@@ -252,6 +268,15 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
                     className="h-4 w-4"
                   />
                   Accès Clients
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={form.canAccessMarketing}
+                    onChange={(e) => setForm({ ...form, canAccessMarketing: e.target.checked })}
+                    className="h-4 w-4"
+                  />
+                  Accès Marketing
                 </label>
               </div>
             )}

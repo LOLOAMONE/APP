@@ -18,6 +18,7 @@ export type SessionPayload = {
   activeCanAccessMarges: boolean;
   activeCanAccessMercuriale: boolean;
   activeCanAccessCrm: boolean;
+  activeCanAccessMarketing: boolean;
 
   // Modules accordés à portée globale (tous les restaurants), ex: ["marketing"].
   globalModules: string[];

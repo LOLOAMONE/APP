@@ -27,20 +27,26 @@ model Restaurant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships       UserRestaurant[]
-  modulePermissions ModulePermission[]
-  employees         Employee[]
-  ingredients       Ingredient[]
-  measureUnits      MeasureUnit[]
-  products          Product[]
-  menus             Menu[]
-  suppliers         Supplier[]
-  packagingUnits    PackagingUnit[]
-  crmCompanies      CrmCompany[]
-  crmContacts       CrmContact[]
-  crmOpportunities  CrmOpportunity[]
-  tickets           Ticket[]
-  channels          Channel[]
+  memberships          UserRestaurant[]
+  modulePermissions    ModulePermission[]
+  employees            Employee[]
+  ingredients          Ingredient[]
+  measureUnits         MeasureUnit[]
+  products             Product[]
+  menus                Menu[]
+  suppliers            Supplier[]
+  packagingUnits       PackagingUnit[]
+  crmCompanies         CrmCompany[]
+  crmContacts          CrmContact[]
+  crmOpportunities     CrmOpportunity[]
+  tickets              Ticket[]
+  channels             Channel[]
+  customerVisits       CustomerVisit[]
+  loyaltyLedgerEntries LoyaltyLedgerEntry[]
+  campaigns            Campaign[]
+  campaignTargets      CampaignRestaurant[]
+  couponRedemptions    CouponRedemption[]
+  editorialPosts       EditorialPost[]
 }
 
 model User {
@@ -50,12 +56,15 @@ model User {
   isSuperAdmin Boolean  @default(false) // outrepasse tout, indépendant de tout restaurant
   createdAt    DateTime @default(now())
 
-  memberships       UserRestaurant[]
-  modulePermissions ModulePermission[]
-  employee          Employee?
-  tickets           Ticket[]           @relation("TicketAuthor")
-  ticketMessages    TicketMessage[]    @relation("TicketMessageSender")
-  channelMessages   ChannelMessage[]   @relation("ChannelMessageSender")
+  memberships            UserRestaurant[]
+  modulePermissions      ModulePermission[]
+  employee               Employee?
+  tickets                Ticket[]           @relation("TicketAuthor")
+  ticketMessages         TicketMessage[]    @relation("TicketMessageSender")
+  channelMessages        ChannelMessage[]   @relation("ChannelMessageSender")
+  campaignsCreated       Campaign[]         @relation("CampaignCreator")
+  editorialPostsCreated  EditorialPost[]    @relation("EditorialPostAuthor")
+  editorialPostsReviewed EditorialPost[]    @relation("EditorialPostReviewer")
 }
 
 // Rattachement d'un utilisateur à un restaurant, avec son rôle LOCAL à ce restaurant.
@@ -372,4 +381,138 @@ model ChannelMessage {
   sender    User?    @relation("ChannelMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
   content   String
   createdAt DateTime @default(now())
+}
+
+// Module MARKETING — CRM fidélité unifié réseau + campagnes national/local + calendrier éditorial
+// partagé. Réutilise ModulePermission("marketing") exactement comme "ticketing" ; contrairement à
+// Tickets/Canaux (ouverts à tout membre), l'accès local est réservé à l'ADMIN du restaurant ou à
+// une permission "marketing" locale explicite (voir activeCanAccessMarketing) — données clients/
+// budget plus sensibles, même traitement que Marges/Mercuriale/Crm.
+
+// Client unifié réseau — existe une seule fois, pas un profil par restaurant. Distinct de
+// CrmCompany/CrmContact (CRM B2B événements/séminaires, section "Clients" existante).
+model Customer {
+  id            String   @id @default(cuid())
+  firstName     String?
+  lastName      String?
+  email         String?  @unique
+  phone         String?  @unique
+  loyaltyPoints Int      @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  visits            CustomerVisit[]
+  loyaltyLedger     LoyaltyLedgerEntry[]
+  couponRedemptions CouponRedemption[]
+}
+
+model CustomerVisit {
+  id           String     @id @default(cuid())
+  customerId   String
+  customer     Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  amount       Float? // montant dépensé, si connu
+  source       String     @default("MANUAL") // "MANUAL" | "POPINA" (lien futur, non bloquant)
+  visitedAt    DateTime   @default(now())
+}
+
+// Historique des points (gain/utilisation) — permet un point gagné dans un restaurant et
+// utilisé dans un autre, traçable, plutôt qu'un simple compteur.
+model LoyaltyLedgerEntry {
+  id           String      @id @default(cuid())
+  customerId   String
+  customer     Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  restaurantId String? // restaurant où l'évènement a eu lieu, null si ajustement réseau
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: SetNull)
+  points       Int // positif = gain, négatif = utilisation
+  reason       String // "VISIT" | "REDEMPTION" | "MANUAL_ADJUSTMENT"
+  createdAt    DateTime    @default(now())
+}
+
+// Campagne NATIONALE (restaurantId null, créée par la maison mère, non modifiable par les
+// franchisés) ou LOCALE (restaurantId requis, créée par un gérant, son propre budget).
+model Campaign {
+  id              String      @id @default(cuid())
+  scope           String // "NATIONAL" | "LOCAL"
+  restaurantId    String? // requis si LOCAL, null si NATIONAL
+  restaurant      Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  status          String      @default("DRAFT") // "DRAFT" | "ACTIVE" | "PAUSED" | "ENDED"
+  startDate       DateTime?
+  endDate         DateTime?
+  budget          Float?
+  allRestaurants  Boolean     @default(true) // si NATIONAL : true = tous, false = voir CampaignRestaurant
+  createdByUserId String?
+  createdBy       User?       @relation("CampaignCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  targets CampaignRestaurant[]
+  coupons Coupon[]
+}
+
+// Sélection de restaurants ciblés par une campagne NATIONALE non diffusée à tous.
+model CampaignRestaurant {
+  id           String     @id @default(cuid())
+  campaignId   String
+  campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, restaurantId])
+}
+
+model Coupon {
+  id             String    @id @default(cuid())
+  campaignId     String
+  campaign       Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  code           String    @unique
+  discountType   String // "PERCENT" | "FIXED_AMOUNT" | "FREE_ITEM"
+  discountValue  Float?
+  maxRedemptions Int?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  redemptions CouponRedemption[]
+}
+
+model CouponRedemption {
+  id           String     @id @default(cuid())
+  couponId     String
+  coupon       Coupon     @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  customerId   String?
+  customer     Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  amount       Float? // montant de la remise réellement appliquée
+  source       String     @default("MANUAL") // lien Popina futur, non bloquant
+  redeemedAt   DateTime   @default(now())
+}
+
+// Calendrier éditorial partagé — planification/visualisation uniquement : aucune connexion aux
+// réseaux sociaux, aucune publication automatique. mediaUrl est un simple lien externe
+// (fichier déjà hébergé par l'utilisateur, ex. OneDrive/Drive) — l'app n'héberge aucun média.
+model EditorialPost {
+  id                  String      @id @default(cuid())
+  restaurantId        String? // null = national (maison mère)
+  restaurant          Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  title               String
+  caption             String
+  mediaUrl            String? // lien externe, non hébergé par l'app
+  platforms           String // JSON stringifié, ex. ["INSTAGRAM","FACEBOOK","GOOGLE"] — indicatif, aucune connexion réelle (SQLite ne supporte pas le type Json natif de Prisma)
+  scheduledAt         DateTime
+  status              String      @default("DRAFT")
+  // "DRAFT" | "PENDING_VALIDATION" | "VALIDATED" | "PUBLISHED" | "REJECTED"
+  validationRequested Boolean     @default(false)
+  reviewedByUserId    String?
+  reviewedBy          User?       @relation("EditorialPostReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+  reviewComment       String?
+  publishedAt         DateTime? // renseigné manuellement quand quelqu'un marque le post comme publié
+  createdByUserId     String?
+  createdBy           User?       @relation("EditorialPostAuthor", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 }

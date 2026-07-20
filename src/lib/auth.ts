@@ -133,6 +133,33 @@ export async function requireGlobalTicketAccess(): Promise<SessionPayload> {
   return user;
 }
 
+function hasGlobalMarketingAccess(user: SessionPayload): boolean {
+  return user.isSuperAdmin || user.globalModules.includes("marketing");
+}
+
+export type MarketingScope = { global: true } | { global: false; restaurantId: string };
+
+/**
+ * Portée d'accès marketing : globale (SUPER_ADMIN ou module transverse "marketing" — vue
+ * consolidée réseau, sans restaurant actif requis) ou locale. Contrairement à Tickets/Canaux
+ * (ouverts à tout membre), l'accès local est réservé à l'ADMIN du restaurant actif ou à une
+ * permission "marketing" locale explicite (activeCanAccessMarketing) — mêmes règles que
+ * Marges/Mercuriale/Crm, données clients et budget plus sensibles.
+ */
+export async function requireMarketingAccess(): Promise<SessionPayload & { marketingScope: MarketingScope }> {
+  const user = await requireUser();
+  if (hasGlobalMarketingAccess(user)) {
+    return { ...user, marketingScope: { global: true } };
+  }
+  if (!user.activeRestaurantId) {
+    throw new Error("NO_ACTIVE_RESTAURANT");
+  }
+  if (user.activeRole !== "ADMIN" && !user.activeCanAccessMarketing) {
+    throw new Error("FORBIDDEN");
+  }
+  return { ...user, marketingScope: { global: false, restaurantId: user.activeRestaurantId } };
+}
+
 /**
  * Construit le payload de session complet pour un utilisateur : calcule le restaurant actif
  * (préféré s'il est valide, sinon auto-sélectionné si un seul restaurant accessible, sinon
@@ -202,6 +229,8 @@ export async function buildSessionPayload(userId: string, preferredRestaurantId?
     activeCanAccessMercuriale:
       isLocalAdmin || activeModulePermissions.has("mercuriale") || globalModules.includes("mercuriale"),
     activeCanAccessCrm: isLocalAdmin || activeModulePermissions.has("crm") || globalModules.includes("crm"),
+    activeCanAccessMarketing:
+      isLocalAdmin || activeModulePermissions.has("marketing") || globalModules.includes("marketing"),
     globalModules,
     restaurants,
   };

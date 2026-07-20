@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin, hashPassword } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
-const MODULES = ["marges", "mercuriale", "crm"] as const;
+const MODULES = ["marges", "mercuriale", "crm", "marketing"] as const;
 
 const createUserSchema = z.object({
   username: z.string().min(3),
@@ -13,6 +13,7 @@ const createUserSchema = z.object({
   canAccessMarges: z.boolean().default(false),
   canAccessMercuriale: z.boolean().default(false),
   canAccessCrm: z.boolean().default(false),
+  canAccessMarketing: z.boolean().default(false),
 });
 
 export const GET = withErrorHandling(async () => {
@@ -37,6 +38,7 @@ export const GET = withErrorHandling(async () => {
     canAccessMarges: m.role === "ADMIN" || m.user.modulePermissions.some((p) => p.module === "marges"),
     canAccessMercuriale: m.role === "ADMIN" || m.user.modulePermissions.some((p) => p.module === "mercuriale"),
     canAccessCrm: m.role === "ADMIN" || m.user.modulePermissions.some((p) => p.module === "crm"),
+    canAccessMarketing: m.role === "ADMIN" || m.user.modulePermissions.some((p) => p.module === "marketing"),
     employee: m.user.employee,
   }));
 
@@ -59,6 +61,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       ["marges", data.canAccessMarges],
       ["mercuriale", data.canAccessMercuriale],
       ["crm", data.canAccessCrm],
+      ["marketing", data.canAccessMarketing],
     ] as [(typeof MODULES)[number], boolean][]
   ).filter(([, granted]) => granted && data.role !== "ADMIN");
 
@@ -87,6 +90,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
       canAccessMarges: data.role === "ADMIN" || data.canAccessMarges,
       canAccessMercuriale: data.role === "ADMIN" || data.canAccessMercuriale,
       canAccessCrm: data.role === "ADMIN" || data.canAccessCrm,
+      canAccessMarketing: data.role === "ADMIN" || data.canAccessMarketing,
       employee: null,
     },
     { status: 201 }

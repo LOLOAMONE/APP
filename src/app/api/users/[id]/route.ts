@@ -9,6 +9,7 @@ const updateSchema = z.object({
   canAccessMarges: z.boolean(),
   canAccessMercuriale: z.boolean(),
   canAccessCrm: z.boolean(),
+  canAccessMarketing: z.boolean(),
 });
 
 export const PUT = withErrorHandling(
@@ -35,6 +36,7 @@ export const PUT = withErrorHandling(
         ["marges", data.canAccessMarges],
         ["mercuriale", data.canAccessMercuriale],
         ["crm", data.canAccessCrm],
+        ["marketing", data.canAccessMarketing],
       ] as [string, boolean][]
     )
       .filter(([, granted]) => granted && data.role !== "ADMIN")
@@ -68,6 +70,7 @@ export const PUT = withErrorHandling(
       canAccessMarges: data.role === "ADMIN" || data.canAccessMarges,
       canAccessMercuriale: data.role === "ADMIN" || data.canAccessMercuriale,
       canAccessCrm: data.role === "ADMIN" || data.canAccessCrm,
+      canAccessMarketing: data.role === "ADMIN" || data.canAccessMarketing,
       employee: user.employee,
     });
   }

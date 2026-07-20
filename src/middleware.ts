@@ -8,6 +8,7 @@ export const config = {
 const MARGES_PATHS = ["/marges", "/api/ingredients", "/api/products", "/api/menus", "/api/measure-units"];
 const MERCURIALE_PATHS = ["/mercuriale", "/api/suppliers", "/api/supplier-items", "/api/packaging-units"];
 const CRM_PATHS = ["/clients", "/api/crm"];
+const MARKETING_PATHS = ["/marketing", "/api/customers", "/api/campaigns", "/api/coupons", "/api/editorial-posts"];
 const USERS_PATHS = ["/api/users"];
 const SUPER_ADMIN_PATHS = ["/reseau", "/api/restaurants", "/api/super-admin"];
 
@@ -65,6 +66,13 @@ export async function middleware(req: NextRequest) {
   }
 
   if (CRM_PATHS.some((p) => pathname.startsWith(p)) && !hasModuleAccess("crm", session.activeCanAccessCrm)) {
+    return deny();
+  }
+
+  if (
+    MARKETING_PATHS.some((p) => pathname.startsWith(p)) &&
+    !hasModuleAccess("marketing", session.activeCanAccessMarketing)
+  ) {
     return deny();
   }
 
