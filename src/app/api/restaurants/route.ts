@@ -53,6 +53,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     await tx.packagingUnit.createMany({
       data: DEFAULT_PACKAGING_UNITS.map((label) => ({ label, restaurantId: created.id })),
     });
+    await tx.channel.create({ data: { name: "Général", isDefault: true, restaurantId: created.id } });
     return created;
   });
 
