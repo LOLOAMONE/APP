@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { Nav } from "./Nav";
+import { Sidebar } from "./Sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -9,8 +9,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="min-h-screen">
-      <Nav
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      <Sidebar
         userId={user.sub}
         isAdmin={user.isSuperAdmin || user.activeRole === "ADMIN"}
         isSuperAdmin={user.isSuperAdmin}
@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canAccessCrm={user.activeCanAccessCrm}
         hasGlobalTicketAccess={user.isSuperAdmin || user.globalModules.includes("ticketing")}
       />
-      <main className="w-full px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
   );
 }
