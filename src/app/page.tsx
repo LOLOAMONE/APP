@@ -13,5 +13,5 @@ export default async function HomePage() {
     // sélectionne un via le sélecteur de la barre de navigation.
     redirect(user.isSuperAdmin ? "/reseau" : "/planning");
   }
-  redirect(user.isSuperAdmin || user.activeRole === "ADMIN" ? "/marges" : "/planning");
+  redirect("/dashboard");
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   UtensilsCrossed,
+  LayoutDashboard,
   TrendingUp,
   Package,
   Users,
@@ -61,6 +62,7 @@ export function Sidebar({
   const networkView = isSuperAdmin && !activeRestaurantId;
 
   const TABS = [
+    { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, visible: true },
     { href: "/marges", label: "Marges", icon: TrendingUp, visible: isAdmin || canAccessMarges },
     { href: "/mercuriale", label: "Mercuriale", icon: Package, visible: isAdmin || canAccessMercuriale },
     { href: "/clients", label: "Clients", icon: Users, visible: isAdmin || canAccessCrm },

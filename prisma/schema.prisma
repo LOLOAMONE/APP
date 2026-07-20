@@ -47,6 +47,9 @@ model Restaurant {
   campaignTargets      CampaignRestaurant[]
   couponRedemptions    CouponRedemption[]
   editorialPosts       EditorialPost[]
+  dashboardWidgets     DashboardWidget[]
+  pages                Page[]
+  projects             Project[]
 }
 
 model User {
@@ -65,6 +68,10 @@ model User {
   campaignsCreated       Campaign[]         @relation("CampaignCreator")
   editorialPostsCreated  EditorialPost[]    @relation("EditorialPostAuthor")
   editorialPostsReviewed EditorialPost[]    @relation("EditorialPostReviewer")
+  dashboardWidgets       DashboardWidget[]
+  pagesCreated           Page[]             @relation("PageAuthor")
+  projectsCreated        Project[]          @relation("ProjectCreator")
+  tasksAssigned          Task[]             @relation("TaskAssignee")
 }
 
 // Rattachement d'un utilisateur à un restaurant, avec son rôle LOCAL à ce restaurant.
@@ -515,4 +522,95 @@ model EditorialPost {
   createdBy           User?       @relation("EditorialPostAuthor", fields: [createdByUserId], references: [id], onDelete: SetNull)
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
+}
+
+// Widgets du tableau de bord personnalisable, sauvegardés par utilisateur ET par restaurant.
+// Le catalogue des widgets disponibles vit dans le code (src/lib/dashboard.ts), pas en base :
+// une ligne n'existe que si l'utilisateur a personnalisé ce widget (ordre ou visibilité) ;
+// sinon les valeurs par défaut du catalogue s'appliquent. Ajouter un widget = juste du code,
+// aucune migration.
+model DashboardWidget {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  type         String
+  order        Int        @default(0)
+  visible      Boolean    @default(true)
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([userId, restaurantId, type])
+}
+
+// Page de notes façon Notion — hiérarchie libre (dossiers = pages sans contenu utilisées comme
+// parent), contenu riche stocké au format Tiptap (JSON stringifié). Portée locale au restaurant
+// pour cette itération (restaurantId nullable pour permettre un espace national plus tard sans
+// migration, non exposé dans l'UI/API tant que ce n'est pas demandé).
+model Page {
+  id              String      @id @default(cuid())
+  restaurantId    String?
+  restaurant      Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  parentId        String?
+  parent          Page?       @relation("PageHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children        Page[]      @relation("PageHierarchy")
+  title           String
+  content         String // JSON Tiptap stringifié
+  order           Int         @default(0)
+  createdByUserId String?
+  createdBy       User?       @relation("PageAuthor", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// Suivi de projet léger, pensé pour accueillir un futur Gantt (chantier Expansion franchise)
+// sans refonte : Task porte déjà dates de début/fin et TaskDependency les dépendances
+// fin-à-début standard, même si aucune UI Gantt n'existe encore. Portée locale au restaurant
+// pour cette itération (restaurantId nullable, même logique que Page).
+model Project {
+  id              String      @id @default(cuid())
+  restaurantId    String?
+  restaurant      Restaurant? @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  status          String      @default("ACTIVE") // "ACTIVE" | "ON_HOLD" | "DONE" | "ARCHIVED"
+  startDate       DateTime?
+  endDate         DateTime?
+  createdByUserId String?
+  createdBy       User?       @relation("ProjectCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  tasks Task[]
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  status         String    @default("TODO") // "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED"
+  startDate      DateTime?
+  endDate        DateTime?
+  order          Int       @default(0)
+  assigneeUserId String?
+  assignee       User?     @relation("TaskAssignee", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  dependsOn    TaskDependency[] @relation("DependentTask")
+  dependedOnBy TaskDependency[] @relation("PrerequisiteTask")
+}
+
+// Dépendance "fin-à-début" (la plus courante en Gantt) : taskId ne peut démarrer qu'une fois
+// dependsOnTaskId terminée. Posée maintenant pour le futur Gantt, non utilisée par l'UI actuelle.
+model TaskDependency {
+  id              String @id @default(cuid())
+  taskId          String
+  task            Task   @relation("DependentTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTaskId String
+  dependsOnTask   Task   @relation("PrerequisiteTask", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
 }
