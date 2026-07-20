@@ -101,6 +101,38 @@ export async function requireCrmAccess(): Promise<SessionWithActiveRestaurant> {
   return requireModuleAccess("crm");
 }
 
+function hasGlobalTicketAccess(user: SessionPayload): boolean {
+  return user.isSuperAdmin || user.globalModules.includes("ticketing");
+}
+
+export type TicketScope = { global: true } | { global: false; restaurantId: string };
+
+/**
+ * Portée d'accès aux tickets : globale (SUPER_ADMIN ou module transverse "ticketing" — voit tous
+ * les restaurants, sans avoir besoin d'un restaurant actif) ou locale (membre d'un restaurant,
+ * limité à activeRestaurantId). Un utilisateur sans portée globale et sans restaurant actif n'a
+ * aucun accès.
+ */
+export async function requireTicketAccess(): Promise<SessionPayload & { ticketScope: TicketScope }> {
+  const user = await requireUser();
+  if (hasGlobalTicketAccess(user)) {
+    return { ...user, ticketScope: { global: true } };
+  }
+  if (!user.activeRestaurantId) {
+    throw new Error("NO_ACTIVE_RESTAURANT");
+  }
+  return { ...user, ticketScope: { global: false, restaurantId: user.activeRestaurantId } };
+}
+
+/** Réservé à la maison mère : SUPER_ADMIN ou module transverse "ticketing" (ex: changer le statut d'un ticket). */
+export async function requireGlobalTicketAccess(): Promise<SessionPayload> {
+  const user = await requireUser();
+  if (!hasGlobalTicketAccess(user)) {
+    throw new Error("FORBIDDEN");
+  }
+  return user;
+}
+
 /**
  * Construit le payload de session complet pour un utilisateur : calcule le restaurant actif
  * (préféré s'il est valide, sinon auto-sélectionné si un seul restaurant accessible, sinon

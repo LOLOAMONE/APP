@@ -39,6 +39,8 @@ model Restaurant {
   crmCompanies      CrmCompany[]
   crmContacts       CrmContact[]
   crmOpportunities  CrmOpportunity[]
+  tickets           Ticket[]
+  channels          Channel[]
 }
 
 model User {
@@ -51,6 +53,9 @@ model User {
   memberships       UserRestaurant[]
   modulePermissions ModulePermission[]
   employee          Employee?
+  tickets           Ticket[]           @relation("TicketAuthor")
+  ticketMessages    TicketMessage[]    @relation("TicketMessageSender")
+  channelMessages   ChannelMessage[]   @relation("ChannelMessageSender")
 }
 
 // Rattachement d'un utilisateur à un restaurant, avec son rôle LOCAL à ce restaurant.
@@ -314,4 +319,57 @@ model CrmOpportunity {
   notes        String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+}
+
+// Module TICKETING — demandes d'un restaurant vers la maison mère (remplace l'email).
+// Accès local : tout membre du restaurant (UserRestaurant), pas de permission dédiée.
+// Accès transverse "maison mère" : User.isSuperAdmin ou ModulePermission(module: "ticketing", restaurantId: null),
+// réutilisant le même mécanisme générique que les autres modules — voir requireTicketReach() dans src/lib/auth.ts.
+model Ticket {
+  id              String          @id @default(cuid())
+  restaurantId    String
+  restaurant      Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  subject         String
+  description     String // contenu initial, distinct du fil de discussion (TicketMessage)
+  status          String          @default("OPEN") // "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED"
+  category        String? // libre
+  createdByUserId String?
+  createdBy       User?           @relation("TicketAuthor", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  messages        TicketMessage[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt // "touché" à chaque nouveau message -> tri par activité récente
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId  String?
+  sender    User?    @relation("TicketMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  content   String
+  createdAt DateTime @default(now())
+}
+
+// Canaux internes façon Slack, INDÉPENDANTS des tickets — communication entre employés d'UN
+// même restaurant uniquement (pas entre restaurants, pas avec la maison mère par défaut).
+model Channel {
+  id           String           @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  isDefault    Boolean          @default(false) // canal "Général" créé à la création du restaurant, non supprimable
+  createdAt    DateTime         @default(now())
+  messages     ChannelMessage[]
+
+  @@unique([restaurantId, name])
+}
+
+model ChannelMessage {
+  id        String   @id @default(cuid())
+  channelId String
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  senderId  String?
+  sender    User?    @relation("ChannelMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  content   String
+  createdAt DateTime @default(now())
 }
