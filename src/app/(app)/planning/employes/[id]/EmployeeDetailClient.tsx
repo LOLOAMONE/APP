@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { DAY_LABELS, emptyTemplate, TemplateDay } from "@/lib/scheduleTemplate";
 
 type Employee = {
@@ -58,8 +58,8 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
       const entries: { dayOfWeek: number; startTime: string; endTime: string }[] = await templateRes.json();
       setTemplate(
         emptyTemplate().map((day, index) => {
-          const entry = entries.find((e) => e.dayOfWeek === index);
-          return entry ? { enabled: true, startTime: entry.startTime, endTime: entry.endTime } : day;
+          const slots = entries.filter((e) => e.dayOfWeek === index).map(({ startTime, endTime }) => ({ startTime, endTime }));
+          return slots.length ? { enabled: true, slots } : day;
         })
       );
     }
@@ -115,7 +115,7 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
       const entries = template
         .map((day, index) => ({ ...day, dayOfWeek: index }))
         .filter((day) => day.enabled)
-        .map(({ dayOfWeek, startTime, endTime }) => ({ dayOfWeek, startTime, endTime }));
+        .flatMap(({ dayOfWeek, slots }) => slots.map((slot) => ({ dayOfWeek, ...slot })));
 
       const res = await fetch(`/api/employees/${employeeId}/schedule-template`, {
         method: "PUT",
@@ -124,10 +124,11 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setTemplateError(data.error || "Erreur lors de l'enregistrement du planning de base");
+        setTemplateError(data.error === "Données invalides" ? "Vérifiez les horaires : trois services maximum par jour, sans chevauchement, avec une fin après le début." : data.error || "Enregistrement impossible.");
         return;
       }
       setTemplateSaved(true);
+    } catch { setTemplateError("Connexion impossible. Réessayez.");
     } finally {
       setSavingTemplate(false);
     }
@@ -240,61 +241,24 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
         </div>
       </form>
 
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-gray-900">Planning de base</h2>
+      <div className="rounded-2xl border border-gray-200 bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold text-gray-900">Horaires habituels</h2><Link href="/planning" className="text-sm font-medium text-brand-700 hover:underline">Retour au planning ↗</Link></div>
         <p className="mt-1 text-xs text-gray-500">
-          Horaires récurrents utilisés par le bouton « Appliquer le planning de base » dans le Planning pour créer
+          Horaires récurrents utilisés par le bouton « Remplir avec le planning de base » dans le Planning pour créer
           les créneaux d&apos;une semaine automatiquement.
         </p>
 
-        <div className="mt-4 overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th>Jour</th>
-                <th>Actif</th>
-                <th>Début</th>
-                <th>Fin</th>
-              </tr>
-            </thead>
-            <tbody>
-              {DAY_LABELS.map((label, index) => {
-                const day = template[index];
-                return (
-                  <tr key={label}>
-                    <td className="font-medium">{label}</td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={day.enabled}
-                        onChange={(e) => updateTemplateDay(index, { enabled: e.target.checked })}
-                        className="h-4 w-4"
-                        aria-label={`${label} actif`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="time"
-                        value={day.startTime}
-                        onChange={(e) => updateTemplateDay(index, { startTime: e.target.value })}
-                        disabled={!day.enabled}
-                        className="disabled:opacity-40"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="time"
-                        value={day.endTime}
-                        onChange={(e) => updateTemplateDay(index, { endTime: e.target.value })}
-                        disabled={!day.enabled}
-                        className="disabled:opacity-40"
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="mt-5 space-y-3">
+          {DAY_LABELS.map((label, index) => {
+            const day = template[index];
+            return <fieldset key={label} disabled={savingTemplate} className={`rounded-2xl border p-4 ${day.enabled ? "border-brand-100 bg-brand-50/30" : "border-gray-100 bg-gray-50"}`}>
+              <label className="flex items-center gap-3 text-sm font-semibold"><input type="checkbox" checked={day.enabled} onChange={(e) => updateTemplateDay(index, { enabled: e.target.checked })} className="h-4 w-4 accent-brand-600" />{label}<span className="ml-auto text-xs font-normal text-gray-500">{day.enabled ? "Travaillé" : "Non planifié"}</span></label>
+              {day.enabled && <div className="mt-4 space-y-3">{day.slots.map((slot, slotIndex) => <div key={slotIndex} className="flex items-end gap-2">
+                <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">{(["startTime", "endTime"] as const).map((field) => <div key={field}><label htmlFor={`template-${index}-${slotIndex}-${field}`} className="mb-1 block text-xs text-gray-500">Service {slotIndex + 1} · {field === "startTime" ? "début" : "fin"}</label><input id={`template-${index}-${slotIndex}-${field}`} type="time" value={slot[field]} onChange={(e) => updateTemplateDay(index, { slots: day.slots.map((s, i) => i === slotIndex ? { ...s, [field]: e.target.value } : s) })} className="w-full bg-white" required /></div>)}</div>
+                {day.slots.length > 1 && <button type="button" aria-label={`Retirer le service ${slotIndex + 1} du ${label}`} onClick={() => updateTemplateDay(index, { slots: day.slots.filter((_, i) => i !== slotIndex) })} className="p-2.5 text-gray-400"><Trash2 className="h-4 w-4" /></button>}
+              </div>)}{day.slots.length < 3 && <button type="button" onClick={() => updateTemplateDay(index, { slots: [...day.slots, { startTime: "18:00", endTime: "23:00" }] })} className="flex items-center gap-1 text-xs font-medium text-brand-700"><Plus className="h-4 w-4" />Ajouter un service</button>}</div>}
+            </fieldset>;
+          })}
         </div>
 
         {templateError && <p className="mt-3 text-sm text-brand-600">{templateError}</p>}

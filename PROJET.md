@@ -72,9 +72,10 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 ### Planning (`/planning`)
 
 - **Employés** — liste (`/planning/employes`) avec poste, taux horaire, et badge de nombre de jours configurés dans le planning de base. Chaque employé a une fiche dédiée (`/planning/employes/[id]`) où se gèrent ses informations (nom, poste, taux horaire, identifiants) et son **planning de base** (grille des 7 jours, horaires récurrents), rattachable à un compte utilisateur.
-- **Créneaux** — planning hebdomadaire par employé, navigation semaine par semaine.
-- **Modèle hebdomadaire** — créneaux récurrents édités depuis la fiche employé, applicables en un clic (bouton "Appliquer le planning de base" dans `/planning`) pour générer la semaine.
-- **Absences** — congés/maladie avec statut (en attente / approuvé / refusé), workflow de validation pour les demandes des employés.
+- **Créneaux** — vue gérant en grille hebdomadaire (noms fixes, couleurs par employé, heures/coût estimé), recherche par nom/poste et accès direct aux horaires habituels. Sur mobile, sélection d’un employé puis cartes journalières. Vue employé ouverte sur « Mes horaires » avec sept cartes, heures et jours travaillés, bascule « Toute l’équipe ». Navigation précédente/suivante, retour à la semaine courante et choix de date. Les tarifs horaires sont renvoyés uniquement aux administrateurs par `GET /api/employees`.
+- **Saisie groupée** — `POST /api/shifts/batch` (admin) ajoute jusqu’à trois services sur plusieurs jours sélectionnés (sept maximum) dans une transaction atomique. Édition/suppression depuis un créneau, messages de réussite/échec. Validation des dates/heures, chevauchements et absences approuvées, également appliquée aux créations/modifications unitaires ; changement d’employé limité au restaurant actif.
+- **Modèle hebdomadaire** — horaires habituels édités en cartes par jour depuis la fiche employé, jusqu’à trois services par jour pour les coupures (sans migration du modèle existant). Le bouton « Remplir avec le planning de base » génère la semaine en conservant les jours déjà planifiés et en ignorant les absences approuvées. Le compteur de jours configurés compte les jours distincts.
+- **Absences** — congés/maladie présentés en cartes adaptées au téléphone avec dates en français et statut (en attente / approuvé / refusé), workflow de validation pour les demandes des employés.
 
 ### Tickets (`/tickets`) et Canaux (`/canaux`)
 

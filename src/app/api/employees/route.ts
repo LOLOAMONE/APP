@@ -24,11 +24,11 @@ export const GET = withErrorHandling(async () => {
       position: true,
       hourlyRate: true,
       userId: true,
-      _count: { select: { scheduleTemplate: true } },
+      scheduleTemplate: { select: { dayOfWeek: true } },
     },
   });
   return NextResponse.json(
-    employees.map(({ _count, ...e }) => ({ ...e, templateDaysCount: _count.scheduleTemplate }))
+    employees.map(({ scheduleTemplate, ...e }) => ({ ...e, ...(!session.isSuperAdmin && session.activeRole !== "ADMIN" ? { hourlyRate: null } : {}), templateDaysCount: new Set(scheduleTemplate.map((entry) => entry.dayOfWeek)).size }))
   );
 });
 

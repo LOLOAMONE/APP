@@ -1,18 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { singleShiftSchema } from "@/lib/shiftValidation";
+import { checkShiftConflicts } from "@/lib/shiftWrites";
 import { prisma } from "@/lib/db";
 import { requireActiveRestaurant, requireAdmin } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
-
-const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-const timeRegex = /^\d{2}:\d{2}$/;
-
-const shiftSchema = z.object({
-  employeeId: z.string().min(1),
-  date: z.string().regex(dateRegex),
-  startTime: z.string().regex(timeRegex),
-  endTime: z.string().regex(timeRegex),
-});
 
 export const GET = withErrorHandling(async (req: NextRequest) => {
   const session = await requireActiveRestaurant();
@@ -33,20 +24,13 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
   const session = await requireAdmin();
-  const data = shiftSchema.parse(await req.json());
-
-  if (data.endTime <= data.startTime) {
-    return NextResponse.json(
-      { error: "L'heure de fin doit être après l'heure de début" },
-      { status: 400 }
-    );
-  }
-
-  const employee = await prisma.employee.findUnique({ where: { id: data.employeeId } });
-  if (!employee || employee.restaurantId !== session.activeRestaurantId) {
-    return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
-  }
-
-  const shift = await prisma.shift.create({ data });
-  return NextResponse.json(shift, { status: 201 });
+  const data = singleShiftSchema.parse(await req.json());
+  return prisma.$transaction(async (tx) => {
+    const employee = await tx.employee.findFirst({ where: { id: data.employeeId, restaurantId: session.activeRestaurantId } });
+    if (!employee) return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
+    const error = await checkShiftConflicts(tx, [data]);
+    if (error) return NextResponse.json({ error }, { status: 409 });
+    const shift = await tx.shift.create({ data });
+    return NextResponse.json(shift, { status: 201 });
+  });
 });

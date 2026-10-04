@@ -5,44 +5,27 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 import { toISODate } from "@/lib/dates";
+import { planningDateSchema } from "@/lib/shiftValidation";
 
-const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-
-const applySchema = z.object({
-  weekStart: z.string().regex(dateRegex), // date du lundi de la semaine ciblée
-});
+const applySchema = z.object({ weekStart: planningDateSchema.refine((date) => parseISO(date).getDay() === 1, "La semaine doit commencer un lundi") });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
   const session = await requireAdmin();
   const { weekStart } = applySchema.parse(await req.json());
   const monday = parseISO(weekStart);
-
-  const entries = await prisma.scheduleTemplateEntry.findMany({
-    where: { employee: { restaurantId: session.activeRestaurantId } },
-  });
-  if (entries.length === 0) {
-    return NextResponse.json({ created: 0 });
-  }
-
   const weekEnd = toISODate(addDays(monday, 6));
-  const existingShifts = await prisma.shift.findMany({
-    where: { date: { gte: weekStart, lte: weekEnd }, employee: { restaurantId: session.activeRestaurantId } },
-    select: { employeeId: true, date: true },
+  return prisma.$transaction(async (tx) => {
+    const scope = { employee: { restaurantId: session.activeRestaurantId } };
+    const entries = await tx.scheduleTemplateEntry.findMany({ where: scope });
+    const existingShifts = await tx.shift.findMany({ where: { ...scope, date: { gte: weekStart, lte: weekEnd } }, select: { employeeId: true, date: true } });
+    const absences = await tx.absence.findMany({ where: { ...scope, status: "APPROVED", startDate: { lte: weekEnd }, endDate: { gte: weekStart } } });
+    const existingKeys = new Set(existingShifts.map((s) => `${s.employeeId}_${s.date}`));
+    let skippedAbsences = 0;
+    const toCreate = entries.map((entry) => ({ employeeId: entry.employeeId, date: toISODate(addDays(monday, entry.dayOfWeek)), startTime: entry.startTime, endTime: entry.endTime })).filter((shift) => {
+      if (absences.some((a) => a.employeeId === shift.employeeId && a.startDate <= shift.date && a.endDate >= shift.date)) { skippedAbsences++; return false; }
+      return !existingKeys.has(`${shift.employeeId}_${shift.date}`);
+    });
+    if (toCreate.length) await tx.shift.createMany({ data: toCreate });
+    return NextResponse.json({ created: toCreate.length, skippedAbsences });
   });
-  const existingKeys = new Set(existingShifts.map((s) => `${s.employeeId}_${s.date}`));
-
-  const toCreate = entries
-    .map((entry) => ({
-      employeeId: entry.employeeId,
-      date: toISODate(addDays(monday, entry.dayOfWeek)),
-      startTime: entry.startTime,
-      endTime: entry.endTime,
-    }))
-    .filter((s) => !existingKeys.has(`${s.employeeId}_${s.date}`));
-
-  if (toCreate.length > 0) {
-    await prisma.shift.createMany({ data: toCreate });
-  }
-
-  return NextResponse.json({ created: toCreate.length });
 });
