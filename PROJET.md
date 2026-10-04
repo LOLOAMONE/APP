@@ -1,6 +1,6 @@
 # Amoné Nice — Documentation du projet
 
-État du code au 2026-07-20. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
+État du code au 2026-10-04. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
 
 ## Stack technique
 
@@ -29,6 +29,8 @@ Gestion des comptes d'un restaurant dans Réglages → Utilisateurs (scopée au 
 **Vue réseau** (`/reseau`, SUPER_ADMIN uniquement) : sélecteur de restaurant dans la nav (visible dès qu'un compte a accès à plusieurs restaurants), bascule "Vue réseau" ⇄ "Mode gérant" sans reconnexion, `/reseau` liste tous les restaurants avec création d'un nouveau (pré-rempli avec une liste de base d'unités/conditionnements, modifiable ensuite sans impact sur les autres restaurants), `/reseau/utilisateurs` gère tous les comptes du réseau (statut super admin, rattachements à plusieurs restaurants avec rôle par restaurant, modules à portée globale). **Pas encore construit** : dashboard consolidé (chiffres agrégés tous restaurants).
 
 ## Navigation et design system
+
+**Refonte visuelle (4 octobre 2026)** : fond ivoire, sidebar bordeaux profond avec navigation active blanche, identité Amoné et avatar du compte. Tableau de bord avec titre hiérarchisé, cartes bordées et chiffres mis en avant ; connexion harmonisée avec la marque. Page Carte organisée en cartes de catégories avec tarifs cliquables, compteurs de produits/formules et onglets Marges harmonisés. Styles communs pour les formulaires, tables, focus clavier et transitions respectant la préférence de mouvement réduit. Navigation responsive et règles de permissions conservées.
 
 **Sidebar verticale** (`Sidebar.tsx`) remplace l'ancienne nav horizontale : colonne fixe à gauche sur desktop (256px, sticky), top bar + drawer réutilisant le même contenu sur mobile. Sélecteur de restaurant et bascule "vue gérant" en haut, Réglages/Déconnexion en bas. Logique de permissions inchangée (`visibleTabs`, `canAccessXxx`).
 

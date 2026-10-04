@@ -15,14 +15,15 @@ export default function MargesLayout({ children }: { children: React.ReactNode }
 
   return (
     <div>
-      <div className="mb-6 flex gap-2">
+      <div className="mb-8 flex flex-wrap gap-1 rounded-2xl border border-gray-200/60 bg-white p-1.5 shadow-sm">
         {SUB_TABS.map((tab) => (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+            aria-current={pathname.startsWith(tab.href) ? "page" : undefined}
+            className={`rounded-xl px-4 py-2.5 text-sm font-medium ${
               pathname.startsWith(tab.href)
-                ? "bg-brand-50 text-brand-700"
+                ? "bg-brand-600 text-white shadow-sm"
                 : "text-gray-600 hover:bg-gray-100"
             }`}
           >

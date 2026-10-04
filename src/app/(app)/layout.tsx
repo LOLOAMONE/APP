@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         hasGlobalTicketAccess={user.isSuperAdmin || user.globalModules.includes("ticketing")}
         hasGlobalMarketingAccess={user.isSuperAdmin || user.globalModules.includes("marketing")}
       />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      <main className="app-content min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-10 lg:py-10">{children}</main>
     </div>
   );
 }

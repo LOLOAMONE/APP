@@ -37,21 +37,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-sm rounded-xl bg-white p-8 shadow-sm">
-        <h1 className="mb-1 text-center text-xl font-bold text-gray-900">
-          Gestion Restaurant
-        </h1>
+    <div className="login-screen flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md rounded-[2rem] border border-white/70 bg-white p-8 shadow-xl sm:p-10">
+        <div className="mb-8 text-center"><span className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">Amoné</span><h1 className="mt-4 text-3xl font-semibold tracking-tight text-gray-900">Bienvenue chez vous.</h1></div>
         <p className="mb-6 text-center text-sm text-gray-500">
-          Connectez-vous à votre espace
+          Votre restaurant. Votre équipe. Un seul espace.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="username" className="mb-1 block text-sm font-medium text-gray-700">
               Identifiant
             </label>
             <input
+              id="username"
+              autoComplete="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -62,10 +62,12 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-700">
               Mot de passe
             </label>
             <input
+              id="password"
+              autoComplete="current-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -79,7 +81,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+            className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
           >
             {loading ? "Connexion..." : "Se connecter"}
           </button>

@@ -192,22 +192,29 @@ export function CarteClient() {
   ];
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <h1 className="mb-6 text-xl font-bold text-gray-900">Carte</h1>
+    <div className="mx-auto max-w-6xl">
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Offre & tarifs</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">Votre carte<span className="text-brand-600">.</span></h1>
+          <p className="mt-2 text-sm text-gray-500">Tous vos produits et formules. Cliquez sur un prix pour le modifier.</p>
+        </div>
+        <span className="rounded-full border border-brand-100 bg-brand-50 px-4 py-2 text-sm font-medium text-brand-700">{products.length} produits · {menus.length} formules</span>
+      </div>
 
-      <div className="columns-1 gap-x-12 md:columns-2">
+      <div className="columns-1 gap-x-5 xl:columns-2">
         {orderedCategories.map((category) => (
-          <div key={category} className="mb-8 break-inside-avoid">
-            <h2 className="mb-3 border-b border-gray-200 pb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <div key={category} className="mb-5 break-inside-avoid rounded-bento border border-gray-200/60 bg-white p-5 shadow-bento sm:p-6">
+            <h2 className="mb-4 border-b border-gray-100 pb-4 text-lg font-semibold tracking-tight text-brand-800">
               {category}
             </h2>
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {map.get(category)!.map((p) => {
                 const isEditing = editing?.kind === "product" && editing.id === p.id;
                 return (
-                  <li key={p.id} className="flex items-baseline gap-3">
+                  <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 rounded-lg py-2">
                     <span className="text-gray-800">{p.name}</span>
-                    <span className="flex-1 border-b border-dotted border-gray-300" />
+                    <span className="hidden min-w-4 flex-1 border-b border-dotted border-gray-200 sm:block" />
                     {isEditing ? (
                       <PriceEditForm
                         priceOnSite={p.priceOnSite}
@@ -220,7 +227,7 @@ export function CarteClient() {
                       <button
                         onClick={() => setEditing({ kind: "product", id: p.id })}
                         title="Modifier le prix"
-                        className="hover:opacity-70"
+                        className="rounded-lg bg-gray-50 px-2.5 py-1 text-right transition hover:bg-brand-50"
                       >
                         <PriceDisplay priceOnSite={p.priceOnSite} priceTakeaway={p.priceTakeaway} />
                       </button>
@@ -233,8 +240,8 @@ export function CarteClient() {
         ))}
 
         {menus.length > 0 && (
-          <div className="mb-8 break-inside-avoid">
-            <h2 className="mb-3 border-b border-gray-200 pb-1 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          <div className="mb-5 break-inside-avoid rounded-bento border border-gray-200/60 bg-white p-5 shadow-bento sm:p-6">
+            <h2 className="mb-4 border-b border-gray-100 pb-4 text-lg font-semibold tracking-tight text-brand-800">
               Formules
             </h2>
             <ul className="space-y-3">
@@ -242,9 +249,9 @@ export function CarteClient() {
                 const isEditing = editing?.kind === "menu" && editing.id === m.id;
                 return (
                   <li key={m.id}>
-                    <div className="flex items-baseline gap-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 rounded-lg py-2">
                       <span className="font-medium text-gray-800">{m.name}</span>
-                      <span className="flex-1 border-b border-dotted border-gray-300" />
+                      <span className="hidden min-w-4 flex-1 border-b border-dotted border-gray-200 sm:block" />
                       {isEditing ? (
                         <PriceEditForm
                           priceOnSite={m.priceOnSite}
@@ -257,13 +264,13 @@ export function CarteClient() {
                         <button
                           onClick={() => setEditing({ kind: "menu", id: m.id })}
                           title="Modifier le prix"
-                          className="hover:opacity-70"
+                          className="rounded-lg bg-gray-50 px-2.5 py-1 text-right transition hover:bg-brand-50"
                         >
                           <PriceDisplay priceOnSite={m.priceOnSite} priceTakeaway={m.priceTakeaway} />
                         </button>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs text-gray-400">
+                    <p className="mt-1 text-xs leading-relaxed text-gray-500">
                       {m.items.map((i) => `${i.quantity}× ${i.product.name}`).join(" · ")}
                     </p>
                   </li>

@@ -104,11 +104,11 @@ export function Sidebar({
 
   function renderContent(onNavigate?: () => void) {
     return (
-      <div className="flex h-full flex-col">
-        <div className="flex items-center gap-2 px-4 pb-4 pt-5">
-          <UtensilsCrossed className="h-5 w-5 shrink-0 text-brand-700" aria-hidden />
-          <span className="truncate text-lg font-bold text-brand-700">
-            {networkView ? "Amoné · Réseau" : "Amoné Nice"}
+      <div className="flex h-full w-full flex-col">
+        <div className="flex items-center gap-3 px-5 pb-6 pt-7">
+          <UtensilsCrossed className="h-10 w-10 shrink-0 rounded-2xl bg-white/10 p-2.5 text-white" aria-hidden />
+          <span className="truncate text-xl font-semibold tracking-tight text-white">
+            {networkView ? "Amoné · Réseau" : "Amoné"}
           </span>
         </div>
 
@@ -127,13 +127,14 @@ export function Sidebar({
           </div>
         )}
 
-        <nav className="flex-1 space-y-1.5 overflow-y-auto px-3">
+        <nav aria-label="Navigation principale" className="flex-1 space-y-1.5 overflow-y-auto px-3">
+          <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">{networkView ? "Gestion du réseau" : "Votre espace"}</p>
           {(networkView ? visibleNetworkTabs : visibleTabs).map((tab) => (
             <SidebarNavItem key={tab.href} href={tab.href} label={tab.label} icon={tab.icon} onClick={onNavigate} />
           ))}
         </nav>
 
-        <div className="mt-auto space-y-2 border-t border-gray-100 px-3 py-3">
+        <div className="mt-auto space-y-2 border-t border-white/10 px-3 py-5">
           {isSuperAdmin && !networkView && (
             <button
               onClick={() => {
@@ -157,11 +158,11 @@ export function Sidebar({
             </button>
           )}
           <div className="flex items-center justify-between gap-2 px-1 pt-1">
-            <span className="truncate text-sm text-gray-500">{username}</span>
+            <div className="flex min-w-0 items-center gap-2.5"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">{username.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><span className="block truncate text-sm font-medium text-white">{username}</span><span className="text-xs text-white/45">Mon compte</span></div></div>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 onClick={() => setShowSettings(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-gray-500 hover:bg-gray-100"
+                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-white/60 hover:bg-white/10 hover:text-white"
                 aria-label="Réglages"
                 title="Réglages"
               >
@@ -169,7 +170,7 @@ export function Sidebar({
               </button>
               <button
                 onClick={handleLogout}
-                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-gray-500 hover:bg-gray-100"
+                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-white/60 hover:bg-white/10 hover:text-white"
                 aria-label="Déconnexion"
                 title="Déconnexion"
               >
@@ -184,14 +185,14 @@ export function Sidebar({
 
   return (
     <>
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-r border-gray-200 bg-white lg:flex">
+      <aside className="app-sidebar sticky top-0 hidden h-screen w-64 shrink-0 lg:flex">
         {renderContent()}
       </aside>
 
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
         <span className="flex items-center gap-2 text-lg font-bold text-brand-700">
           <UtensilsCrossed className="h-5 w-5" aria-hidden />
-          {networkView ? "Amoné · Réseau" : "Amoné Nice"}
+          {networkView ? "Amoné · Réseau" : "Amoné"}
         </span>
         <button
           onClick={() => setMobileOpen(true)}
@@ -205,7 +206,7 @@ export function Sidebar({
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="fixed inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <div className="relative flex h-full w-72 max-w-[85vw] flex-col bg-white shadow-xl">
+          <div className="app-sidebar relative flex h-full w-72 max-w-[85vw] flex-col shadow-xl">
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute right-3 top-4 flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:text-gray-600"

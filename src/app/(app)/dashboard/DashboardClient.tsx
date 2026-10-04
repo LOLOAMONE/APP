@@ -87,10 +87,11 @@ export function DashboardClient({ username, shortcuts }: { username: string; sho
 
   return (
     <div>
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Bonjour {username}</h1>
-          <p className="mt-1 text-sm text-gray-500">Votre tableau de bord.</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Votre restaurant, en un regard</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">Bonjour {username}<span className="text-brand-600">.</span></h1>
+          <p className="mt-1 text-sm text-gray-500">Retrouvez les priorités du jour et les outils de votre équipe.</p>
         </div>
         <button
           onClick={() => setCustomizing((c) => !c)}
@@ -137,11 +138,11 @@ export function DashboardClient({ username, shortcuts }: { username: string; sho
               onDragStart={() => customizing && setDraggingType(w.type)}
               onDragOver={(e) => customizing && e.preventDefault()}
               onDrop={() => customizing && handleDrop(w.type)}
-              className={`rounded-bento bg-white p-5 shadow-bento ${customizing ? "cursor-move" : ""}`}
+              className={`rounded-bento border border-gray-200/60 bg-white p-6 shadow-bento ${customizing ? "cursor-move" : ""}`}
             >
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-5 flex items-center gap-2">
                 {customizing && <GripVertical className="h-4 w-4 text-gray-300" aria-hidden />}
-                <h2 className="text-sm font-semibold text-gray-900">{w.label}</h2>
+                <h2 className="text-base font-semibold text-gray-900">{w.label}</h2>
               </div>
 
               {w.type === "TODAY_SUMMARY" && summary && <TodaySummaryWidget summary={summary} />}
@@ -200,9 +201,9 @@ function KeyNumbersWidget({ summary }: { summary: Summary }) {
         <Link
           key={t.label}
           href={t.href}
-          className="rounded-bento-sm bg-gray-50 p-3 text-center hover:shadow-bento"
+          className="rounded-bento-sm border border-brand-100/60 bg-brand-50/50 px-2 py-5 text-center transition hover:bg-brand-50 hover:shadow-bento"
         >
-          <div className="text-2xl font-bold text-gray-900">{t.value}</div>
+          <div className="text-3xl font-semibold tracking-tight text-brand-800">{t.value}</div>
           <div className="mt-0.5 text-xs text-gray-500">{t.label}</div>
         </Link>
       ))}
@@ -218,9 +219,9 @@ function ShortcutsWidget({ shortcuts }: { shortcuts: Shortcuts }) {
         <Link
           key={l.href}
           href={l.href}
-          className="flex items-center gap-2 rounded-bento-sm bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:shadow-bento"
+          className="flex items-center gap-3 rounded-bento-sm border border-gray-100 bg-white px-3 py-4 text-sm font-medium text-gray-700 transition hover:border-brand-200 hover:bg-brand-50"
         >
-          <l.icon className="h-4 w-4 text-gray-400" aria-hidden />
+          <l.icon className="h-5 w-5 text-brand-600" aria-hidden />
           {l.label}
         </Link>
       ))}
