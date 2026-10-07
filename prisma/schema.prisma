@@ -27,6 +27,7 @@ model Restaurant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  clientFieldConfig    String @default("[]")
   memberships          UserRestaurant[]
   modulePermissions    ModulePermission[]
   employees            Employee[]
@@ -311,6 +312,7 @@ model CrmContact {
   restaurant    Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   companyId     String?
   company       CrmCompany?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  customValues  String @default("{}")
   name          String
   firstName            String?
   lastName             String?

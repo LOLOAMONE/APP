@@ -2,6 +2,7 @@ import { z } from "zod";
 import { planningDateSchema } from "./shiftValidation";
 const optionalText = (max: number) => z.string().trim().max(max).nullable().optional();
 export const contactSchema = z.object({
+  customValues: z.record(z.string().regex(/^custom_[a-zA-Z0-9_-]{1,73}$/), z.string().max(2000)).refine((values) => Object.keys(values).length <= 50).optional(),
   name: z.string().trim().min(1).max(200),
   firstName: optionalText(100), lastName: optionalText(100), companyName: optionalText(200),
   companyId: optionalText(100), role: optionalText(150), phone: optionalText(50),
