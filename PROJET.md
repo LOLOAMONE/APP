@@ -34,6 +34,8 @@ La structure multi-restaurants, les rôles et les données existantes restent co
 
 **Refonte visuelle (4 octobre 2026)** : fond ivoire, sidebar bordeaux profond avec navigation active blanche, identité Amoné et avatar du compte. Tableau de bord avec titre hiérarchisé, cartes bordées et chiffres mis en avant ; connexion harmonisée avec la marque. Page Carte organisée en cartes de catégories avec tarifs cliquables, compteurs de produits/formules et onglets Marges harmonisés. Styles communs pour les formulaires, tables, focus clavier et transitions respectant la préférence de mouvement réduit. Navigation responsive et règles de permissions conservées.
 
+**Identité (7 octobre 2026)** : signature typographique « amonē. » à la place des couverts dans la sidebar, sur téléphone et à la connexion ; favicon SVG avec monogramme.
+
 **Sidebar verticale** (`Sidebar.tsx`) remplace l'ancienne nav horizontale : colonne fixe à gauche sur desktop (256px, sticky), top bar + drawer réutilisant le même contenu sur mobile. Sélecteur de restaurant et bascule "vue gérant" en haut, Réglages/Déconnexion en bas. Logique de permissions inchangée (`visibleTabs`, `canAccessXxx`).
 
 **Design system Bento** — tokens Tailwind réutilisables pour tous les blocs/cartes : `rounded-bento` (20px, blocs), `rounded-bento-sm` (14px, items internes), `shadow-bento`/`shadow-bento-hover` (ombre douce, pas de bordure visible). Gutters sur l'échelle Tailwind standard (`gap-5`/`p-5`, `gap-6`/`p-6`), pas de token dédié. Appliqué à la sidebar et au tableau de bord ; les autres écrans seront migrés au fil des prochains chantiers.
@@ -42,7 +44,7 @@ La structure multi-restaurants, les rôles et les données existantes restent co
 
 ### Tableau de bord (`/dashboard`)
 
-Page d'accueil personnalisable, scopée au restaurant actif. Catalogue de widgets défini dans le code (`src/lib/dashboard.ts`) — résumé du jour (créneaux + absences en attente), chiffres clés (tickets ouverts, articles à commander, publications en attente de validation), raccourcis vers les sections accessibles. `DashboardWidget` ne stocke que ce qu'un utilisateur a personnalisé (ordre, visibilité) par utilisateur + restaurant ; un widget jamais touché utilise les valeurs par défaut du catalogue — ajouter un widget plus tard ne demande aucune migration. Réordonnancement par glisser-déposer (HTML5 natif, même pattern que Ingrédients/Produits), masquage individuel via le panneau "Personnaliser".
+Page d'accueil personnalisable, scopée au restaurant actif. Catalogue de widgets défini dans le code (`src/lib/dashboard.ts`) — résumé du jour (créneaux + absences en attente), chiffres clés (tâches à faire, articles à commander, actions marketing datées non terminées), raccourcis vers les sections accessibles. `DashboardWidget` ne stocke que ce qu'un utilisateur a personnalisé (ordre, visibilité) par utilisateur + restaurant ; un widget jamais touché utilise les valeurs par défaut du catalogue — ajouter un widget plus tard ne demande aucune migration. Réordonnancement par glisser-déposer (HTML5 natif, même pattern que Ingrédients/Produits), masquage individuel via le panneau "Personnaliser".
 
 ### Marges (`/marges`)
 
@@ -55,13 +57,12 @@ Ingrédients, Produits et Menus partagent : tri par colonne, ordre personnalisé
 
 ### Mercuriale (`/mercuriale`)
 
-Catalogue de prix multi-fournisseurs.
-
-- Chaque **fournisseur** (`Supplier`) a ses coordonnées (email, tél., code client), son calendrier de commande/livraison, un minimum de commande, et une catégorie libre optionnelle.
-- Si au moins un fournisseur a une catégorie, l'affichage bascule en **mode catégorie** : la catégorie devient l'onglet principal, avec un tableau empilé par fournisseur de cette catégorie. Les catégories sont renommables (✏️ à côté de l'onglet), le renommage se répercute sur tous les fournisseurs concernés.
-- Chaque **article** (`SupplierItem`) a une référence, désignation, conditionnement, prix unitaire HT / prix carton HT, une sous-catégorie libre, et un statut **commandé / reçu** avec dates.
-- Page **"À commander"** (`/mercuriale/a-commander`) : liste consolidée de tous les articles à commander (quantité > 0, pas encore commandé) tous fournisseurs confondus, avec cases à cocher. Bouton "Supprimer toutes les commandes" (avec confirmation) pour marquer en une fois tous les articles listés comme commandés — ils rejoignent alors le suivi de réception dans la Mercuriale.
-- Glisser-déposer pour réordonner fournisseurs et articles ; unités/conditionnements réutilisables partagés avec la création d'articles.
+- Catalogue en cartes lisibles sur téléphone et ordinateur, regroupées par fournisseur/catégorie : désignation, conditionnement, référence/lien, prix unité/colis HT, quantité à commander et statut.
+- Filtres Catalogue / À commander / À réceptionner ; recherche et tri par nom/prix/ordre personnalisé. Gestion fournisseurs, articles, catégories et conditionnements conservée.
+- Quantité enregistrée à la sortie du champ, mises à jour ciblées via `PATCH /api/supplier-items/[id]` pour conserver les autres champs ; erreurs affichées. Suivi de réception avec date et bouton « Marquer comme reçu ».
+- **Préparer une commande** (`/mercuriale/a-commander`) : sélection depuis tous les articles, quantités, recherche et filtre fournisseur. Sélection enregistrable (les articles retirés d'un panier existant sont remis à zéro) ; génération d'un texte de mail par fournisseur avec code client, références, conditionnements, livraison souhaitée et commentaire. Copier le mail ou l'ouvrir dans le client mail ; aucun envoi automatique.
+- Bouton « Commande envoyée » après confirmation : mise à jour atomique de la sélection du fournisseur, puis suivi dans « À réceptionner ». `POST /api/supplier-orders` vérifie tous les articles dans le restaurant actif, refuse les doublons et les articles déjà en attente de réception. Les prix et catégories sont conservés.
+- Le suivi existant stocke une seule commande courante par article ; un historique complet des commandes reste une évolution future.
 
 ### Clients / CRM (`/clients`)
 
@@ -79,22 +80,26 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 - **Modèle hebdomadaire** — horaires habituels édités en cartes par jour depuis la fiche employé, jusqu’à trois services par jour pour les coupures (sans migration du modèle existant). Le bouton « Remplir avec le planning de base » génère la semaine en conservant les jours déjà planifiés et en ignorant les absences approuvées. Le compteur de jours configurés compte les jours distincts.
 - **Absences** — congés/maladie présentés en cartes adaptées au téléphone avec dates en français et statut (en attente / approuvé / refusé), workflow de validation pour les demandes des employés.
 
-### Tickets (`/tickets`) et Canaux (`/canaux`)
+### Notes & tâches (`/notes`) et Canaux (`/canaux`)
 
-Premier module transverse construit sur l'architecture multi-restaurants (réutilise `ModulePermission`, pas de système de permissions parallèle) :
+**7 octobre 2026 : Tickets remplacé par Notes & tâches.** Les anciennes URL `/tickets` redirigent vers `/notes`. Les interfaces et routes API tickets ont été retirées ; les tables historiques restent intactes en base.
 
-- **Tickets** — demandes d'un restaurant vers la maison mère, remplaçant l'email. Chaque `Ticket` (sujet, description initiale, statut `OPEN`/`IN_PROGRESS`/`RESOLVED`/`CLOSED`, catégorie libre, restaurant d'origine, auteur) a son fil de discussion (`TicketMessage`, horodaté). Créable par **tout membre** du restaurant actif (pas de permission dédiée) ; le statut ne peut être changé que par la maison mère (`isSuperAdmin` ou `ModulePermission(module: "ticketing", restaurantId: null)` — rôle transverse, ex. équipe support sans être SUPER_ADMIN). La vue `/tickets` s'adapte automatiquement à la portée de l'utilisateur : limitée au restaurant actif pour tous les comptes — un seul endpoint (`GET /api/tickets`), pas deux vues séparées.
-- **Canaux** — communication interne façon Slack, **indépendante** des tickets, scopée au restaurant actif uniquement (pas d'agrégation réseau). Chaque restaurant reçoit un canal "Général" par défaut à sa création (`POST /api/restaurants`) ; tout membre peut créer d'autres canaux par sujet. `Channel`/`ChannelMessage`, ouverts à tout membre du restaurant.
-- Rafraîchissement des fils par polling simple (`usePolling`, ~6-15s selon le contexte, en pause quand l'onglet n'est pas visible) — pas de WebSocket/SSE pour cette première itération.
-- Nav : "Tickets" et "Canaux" visibles à tout membre en vue restaurant ; la vue réseau est retirée.
+- Pages libres avec titre, texte, outils titre/liste/checklist et aperçu (syntaxe simple, affichage échappé, pas de HTML arbitraire).
+- Favoris, recherche dans le titre et le contenu, archivage et restauration. Enregistrement explicite avec état visible ; confirmation avant de quitter une page modifiée.
+- Onglet « À faire » : tâches à cocher, détails, échéance facultative, indicateur d'échéances dépassées. Les tâches ouvertes alimentent le tableau de bord.
+- Modèle `WorkspaceItem`, isolé par restaurant : espace `NOTES` (`NOTE`/`TASK`) ou `MARKETING` (`IDEA`/`TASK`/`POST`), date civile facultative, terminé, favori, archive. `GET/POST /api/workspace` et `PUT /api/workspace/[id]` vérifient l'accès au restaurant ; le marketing exige en plus ses permissions existantes. Notes ouvert aux membres du restaurant comme l'ancien module Tickets.
+- Canaux conservés pour les discussions d'équipe (`Channel`/`ChannelMessage`), polling existant.
 
 ### Marketing (`/marketing`)
 
-Deuxième module transverse (réutilise `ModulePermission("marketing")`, comme "ticketing") — mais accès local réservé à l'ADMIN ou à une permission explicite (comme Marges/Mercuriale/Crm), pas ouvert à tout employé : données clients/budget plus sensibles.
+**7 octobre 2026 : calendrier simple, idées et tâches**, à la place du workflow réseau de validation.
 
-- **Campagnes** (`/marketing/campagnes`) — nationales (`Campaign.scope = "NATIONAL"`, restaurantId null, créées par la maison mère, ciblage optionnel d'une sélection de restaurants via `CampaignRestaurant`) ou locales (créées par un gérant, son propre budget), non modifiables par les franchisés si nationales. Coupons (`Coupon`) avec suivi d'utilisation réelle (`CouponRedemption`, plafond de redemptions, expiration) — lien Popina prévu mais non branché (champ `source`).
-- **Calendrier éditorial** (`/marketing/calendrier`) — pense-bête partagé de publications à venir (`EditorialPost`) : titre, légende, lien externe vers le média (Drive/OneDrive — l'app n'héberge aucun fichier), plateformes visées à titre indicatif, date programmée. Validation optionnelle par la maison mère (statuts `DRAFT` → `PENDING_VALIDATION` → `VALIDATED`/`REJECTED` → `PUBLISHED`, marqué manuellement). **Aucune connexion aux réseaux sociaux ni publication automatique** — décision explicite pour cette itération.
-- CRM clients/fidélité unifié réseau (`Customer`, `CustomerVisit`, `LoyaltyLedgerEntry`) posé dans le schéma mais **non exposé par une API** — pas de source de données fiable identifiée (pas de caisse connectée), remis à plus tard.
+- Calendrier mensuel, navigation entre mois et retour à aujourd'hui ; clic sur un jour pour préparer une action. Sur téléphone, agenda du mois en liste.
+- Réserve d'idées/actions sans date, vue « Idées & actions » en trois colonnes (idées, tâches, publications), recherche, favoris et archives restaurables.
+- Formulaire simple : titre, contenu/étapes/liens, type, date facultative. Cocher une tâche ou marquer une publication comme publiée est manuel.
+- Les publications locales préexistantes sont reprises par `scripts/import-marketing.ts` au démarrage après migration : date convertie en Europe/Paris, import idempotent, originaux conservés. `/marketing/calendrier` redirige vers `/marketing`.
+- Les campagnes/coupons historiques et leurs API restent disponibles à `/marketing/campagnes`, sans onglet dans le nouvel espace. Pas de publication automatique sur les réseaux sociaux.
+- Les actions datées non terminées alimentent les chiffres clés du tableau de bord.
 
 ## Modèles de données (Prisma)
 
@@ -112,10 +117,11 @@ Deuxième module transverse (réutilise `ModulePermission("marketing")`, comme "
 | `Supplier` / `SupplierItem` / `PackagingUnit` | Mercuriale (fournisseurs, articles, conditionnements) |
 | `Shift` / `Absence` | Planning et congés |
 | `CrmCompany` / `CrmContact` / `CrmOpportunity` | CRM entreprises/événements |
-| `Ticket` / `TicketMessage` | Demandes d'un restaurant vers la maison mère + fil de discussion |
+| `Ticket` / `TicketMessage` | Données historiques conservées, module retiré |
 | `Channel` / `ChannelMessage` | Canaux internes par restaurant + fil de messages |
 | `Campaign` / `CampaignRestaurant` / `Coupon` / `CouponRedemption` | Campagnes marketing national/local + coupons |
-| `EditorialPost` | Calendrier éditorial partagé (pense-bête, pas de publication auto) |
+| `EditorialPost` | Publications historiques locales reprises dans WorkspaceItem |
+| `WorkspaceItem` | Notes, tâches et calendrier marketing du restaurant |
 | `Customer` / `CustomerVisit` / `LoyaltyLedgerEntry` | CRM fidélité réseau — posé, pas encore exposé par une API |
 | `DashboardWidget` | Personnalisation du tableau de bord (ordre/visibilité par utilisateur) |
 | `Page` | Notes hiérarchiques façon Notion — posé, pas encore exposé (prochaine étape) |
@@ -123,7 +129,7 @@ Deuxième module transverse (réutilise `ModulePermission("marketing")`, comme "
 
 ## Ce qui n'existe pas encore (identifié dans les échanges précédents)
 
-- **Espace Notes/Projets** (UI + API) — schéma posé (`Page`, `Project`, `Task`, `TaskDependency`), prochaine étape du chantier sidebar/dashboard.
+- **Projets / Gantt** — schéma historique posé (`Project`, `Task`, `TaskDependency`), pas encore exposé. Les notes et tâches simples utilisent désormais `WorkspaceItem`.
 - Migration **SQLite → PostgreSQL**, nécessaire avant une montée en charge significative (SQLite gère mal les écritures concurrentes — d'autant plus critique maintenant que plusieurs restaurants partagent le même fichier).
 - **Sauvegardes automatiques** de la base de données — aucune protection contre une perte de données aujourd'hui.
 - **Surveillance/alertes** du VPS (CPU, erreurs de verrouillage base de données).

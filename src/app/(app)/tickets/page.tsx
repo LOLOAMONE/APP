@@ -1,18 +1,2 @@
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
-import { TicketsClient } from "./TicketsClient";
-
-export default async function TicketsPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
-  }
-
-  return (
-    <TicketsClient
-      hasGlobalAccess={false}
-      restaurants={user.restaurants}
-      canCreate={!!user.activeRestaurantId}
-    />
-  );
-}
+export default function RetiredTicketsPage() { redirect("/notes"); }

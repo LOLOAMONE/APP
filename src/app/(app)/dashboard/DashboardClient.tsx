@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { GripVertical, Settings2, TrendingUp, Package, Users, Megaphone, CalendarDays, Hash, LifeBuoy } from "lucide-react";
+import { GripVertical, Settings2, TrendingUp, Package, Users, Megaphone, CalendarDays, Hash, NotebookPen } from "lucide-react";
 
 type Widget = { type: string; label: string; order: number; visible: boolean };
 
@@ -12,7 +12,7 @@ type Summary = {
     shifts: { employeeName: string; startTime: string; endTime: string }[];
     absencesPending: number;
   };
-  keyNumbers: { ticketsOpen: number; itemsToOrder: number; postsPendingValidation: number };
+  keyNumbers: { tasksOpen: number; itemsToOrder: number; marketingUpcoming: number };
 };
 
 type Shortcuts = { marges: boolean; mercuriale: boolean; crm: boolean; marketing: boolean };
@@ -34,7 +34,7 @@ const SHORTCUT_LINKS = [
   { href: "/marketing", label: "Marketing", icon: Megaphone, key: "marketing" as const },
   { href: "/planning", label: "Planning", icon: CalendarDays, key: null },
   { href: "/canaux", label: "Canaux", icon: Hash, key: null },
-  { href: "/tickets", label: "Tickets", icon: LifeBuoy, key: null },
+  { href: "/notes", label: "Notes & tâches", icon: NotebookPen, key: null },
 ];
 
 export function DashboardClient({ username, shortcuts }: { username: string; shortcuts: Shortcuts }) {
@@ -189,11 +189,11 @@ function TodaySummaryWidget({ summary }: { summary: Summary }) {
 }
 
 function KeyNumbersWidget({ summary }: { summary: Summary }) {
-  const { ticketsOpen, itemsToOrder, postsPendingValidation } = summary.keyNumbers;
+  const { tasksOpen, itemsToOrder, marketingUpcoming } = summary.keyNumbers;
   const tiles = [
-    { label: "Tickets ouverts", value: ticketsOpen, href: "/tickets" },
+    { label: "Tâches à faire", value: tasksOpen, href: "/notes" },
     { label: "Articles à commander", value: itemsToOrder, href: "/mercuriale/a-commander" },
-    { label: "Publications en attente", value: postsPendingValidation, href: "/marketing/calendrier" },
+    { label: "Marketing à venir", value: marketingUpcoming, href: "/marketing" },
   ];
   return (
     <div className="grid grid-cols-3 gap-3">

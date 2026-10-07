@@ -1,5 +1,6 @@
 "use client";
 
+import { Brand } from "@/components/Brand";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -28,8 +29,7 @@ export default function LoginPage() {
         return;
       }
 
-      const data = await res.json();
-      router.push(data.role === "ADMIN" ? "/marges" : "/planning");
+      router.push("/dashboard");
       router.refresh();
     } finally {
       setLoading(false);
@@ -39,7 +39,7 @@ export default function LoginPage() {
   return (
     <div className="login-screen flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md rounded-[2rem] border border-white/70 bg-white p-8 shadow-xl sm:p-10">
-        <div className="mb-8 text-center"><span className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-600">Amoné</span><h1 className="mt-4 text-3xl font-semibold tracking-tight text-gray-900">Bienvenue chez vous.</h1></div>
+        <div className="mb-8 text-center"><span className="inline-flex text-brand-700"><Brand /></span><h1 className="mt-4 text-3xl font-semibold tracking-tight text-gray-900">Bienvenue chez vous.</h1></div>
         <p className="mb-6 text-center text-sm text-gray-500">
           Votre restaurant. Votre équipe. Un seul espace.
         </p>

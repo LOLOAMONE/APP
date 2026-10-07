@@ -118,6 +118,7 @@ export function MercurialeClient() {
   const [editingCategoryTab, setEditingCategoryTab] = useState<string | null>(null);
   const [editingCategoryLabel, setEditingCategoryLabel] = useState("");
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortKey, setSortKey] = useState<ItemSortKey>("custom");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -196,12 +197,12 @@ export function MercurialeClient() {
     [suppliers]
   );
 
-  const dragEnabled = sortKey === "custom" && search === "";
+  const dragEnabled = sortKey === "custom" && search === "" && statusFilter === "ALL";
 
   function getDisplayedItems(supplier: Supplier): SupplierItem[] {
     const q = search.toLowerCase();
     const filtered = supplier.items.filter(
-      (i) => i.designation.toLowerCase().includes(q) || (i.reference ?? "").toLowerCase().includes(q)
+      (i) => (i.designation.toLowerCase().includes(q) || (i.reference ?? "").toLowerCase().includes(q)) && (statusFilter === "ALL" || (statusFilter === "PENDING" && !!i.orderedAt && !i.receivedAt) || (statusFilter === "TO_ORDER" && i.orderQuantity > 0 && !i.orderedAt))
     );
     if (sortKey === "custom") return filtered;
     const sorted = [...filtered].sort((a, b) => {
@@ -242,17 +243,6 @@ export function MercurialeClient() {
   function categorySuggestionsFor(supplier: Supplier | null): string[] {
     return Array.from(new Set((supplier?.items ?? []).map((i) => i.category).filter((c): c is string => !!c)));
   }
-
-  function toggleSort(key: Exclude<ItemSortKey, "custom">) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  }
-
-  const sortArrow = (key: ItemSortKey) => (sortKey === key ? (sortDir === "asc" ? " ↑" : " ↓") : "");
 
   function openCreateSupplier() {
     setEditingSupplier(null);
@@ -502,54 +492,20 @@ export function MercurialeClient() {
     if (res.ok) await loadAll();
   }
 
-  async function handleQuantityChange(i: SupplierItem, value: string) {
-    const orderQuantity = parseFloat(value) || 0;
-    setSuppliers((prev) =>
-      prev.map((s) =>
-        s.id !== i.supplierId
-          ? s
-          : { ...s, items: s.items.map((it) => (it.id === i.id ? { ...it, orderQuantity } : it)) }
-      )
-    );
-    await fetch(`/api/supplier-items/${i.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reference: i.reference,
-        designation: i.designation,
-        packaging: i.packaging,
-        orderQuantity,
-        unitPriceHT: i.unitPriceHT,
-        casePriceHT: i.casePriceHT,
-        orderedAt: i.orderedAt,
-        receivedAt: i.receivedAt,
-      }),
-    });
+  async function updateItem(item: SupplierItem, patch: Partial<SupplierItem>) {
+    setError(null);
+    try {
+      const res = await fetch(`/api/supplier-items/${item.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error("L’article n’a pas pu être enregistré.");
+      const updated = await res.json();
+      setSuppliers((prev) => prev.map((supplier) => ({ ...supplier, items: supplier.items.map((i) => i.id === item.id ? updated : i) })));
+    } catch (e) { setError(e instanceof Error ? e.message : "Connexion indisponible."); await loadAll(); }
   }
 
   async function handleDateChange(i: SupplierItem, field: "orderedAt" | "receivedAt", value: string) {
-    const dateValue = value || null;
-    setSuppliers((prev) =>
-      prev.map((s) =>
-        s.id !== i.supplierId
-          ? s
-          : { ...s, items: s.items.map((it) => (it.id === i.id ? { ...it, [field]: dateValue } : it)) }
-      )
-    );
-    await fetch(`/api/supplier-items/${i.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reference: i.reference,
-        designation: i.designation,
-        packaging: i.packaging,
-        orderQuantity: i.orderQuantity,
-        unitPriceHT: i.unitPriceHT,
-        casePriceHT: i.casePriceHT,
-        orderedAt: field === "orderedAt" ? dateValue : i.orderedAt,
-        receivedAt: field === "receivedAt" ? dateValue : i.receivedAt,
-      }),
-    });
+    await updateItem(i, { [field]: value || null });
   }
 
   async function handleAddUnit(e: React.FormEvent) {
@@ -714,135 +670,22 @@ export function MercurialeClient() {
               {category !== null && (
                 <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">{category}</h3>
               )}
-              <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <table>
-                  <thead>
-                    <tr>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("reference")}>
-                        Référence{sortArrow("reference")}
-                      </th>
-                      <th>Lien</th>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("designation")}>
-                        Désignation{sortArrow("designation")}
-                      </th>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("packaging")}>
-                        Conditionnement{sortArrow("packaging")}
-                      </th>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("orderQuantity")}>
-                        Commande{sortArrow("orderQuantity")}
-                      </th>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("unitPriceHT")}>
-                        Prix U. HT{sortArrow("unitPriceHT")}
-                      </th>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("casePriceHT")}>
-                        Prix carton/colis HT{sortArrow("casePriceHT")}
-                      </th>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("orderedAt")}>
-                        <span className="inline-flex items-center gap-1">
-                          <Package className="h-3.5 w-3.5" aria-hidden />
-                          Commandé le{sortArrow("orderedAt")}
-                        </span>
-                      </th>
-                      <th className="cursor-pointer select-none" onClick={() => toggleSort("receivedAt")}>
-                        <span className="inline-flex items-center gap-1">
-                          <Check className="h-3.5 w-3.5" aria-hidden />
-                          Reçu le{sortArrow("receivedAt")}
-                        </span>
-                      </th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((i) => (
-                      <tr
-                        key={i.id}
-                        draggable={dragEnabled}
-                        onDragStart={() => dragEnabled && setDraggingId(i.id)}
-                        onDragOver={(e) => dragEnabled && e.preventDefault()}
-                        onDrop={() => dragEnabled && handleItemDrop(supplier, category, i.id)}
-                        onDragEnd={() => setDraggingId(null)}
-                        className={`${dragEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${
-                          draggingId === i.id ? "opacity-40" : ""
-                        }`}
-                      >
-                        <td className="text-gray-500">{isUrl(i.reference) ? "—" : i.reference || "—"}</td>
-                        <td>
-                          {isUrl(i.reference) && (
-                            <a
-                              href={i.reference}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                              Voir
-                            </a>
-                          )}
-                        </td>
-                        <td className="max-w-xs whitespace-pre-line font-medium">{i.designation}</td>
-                        <td className="text-gray-500">{i.packaging || "—"}</td>
-                        <td>
-                          <input
-                            type="number"
-                            step="1"
-                            min="0"
-                            value={i.orderQuantity}
-                            onChange={(e) => handleQuantityChange(i, e.target.value)}
-                            className="w-16"
-                          />
-                        </td>
-                        <td>{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</td>
-                        <td>{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</td>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={!!i.orderedAt}
-                              onChange={(e) => handleDateChange(i, "orderedAt", e.target.checked ? todayISO() : "")}
-                              title="Commandé"
-                              aria-label="Commandé"
-                              className="h-4 w-4"
-                            />
-                            <input
-                              type="date"
-                              value={toDateInputValue(i.orderedAt)}
-                              onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)}
-                              className={`w-36 text-sm ${i.orderedAt ? "text-orange-600" : "text-gray-400"}`}
-                            />
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={!!i.receivedAt}
-                              onChange={(e) => handleDateChange(i, "receivedAt", e.target.checked ? todayISO() : "")}
-                              title="Reçu"
-                              aria-label="Reçu"
-                              className="h-4 w-4"
-                            />
-                            <input
-                              type="date"
-                              value={toDateInputValue(i.receivedAt)}
-                              onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)}
-                              className={`w-36 text-sm ${i.receivedAt ? "text-green-600" : "text-gray-400"}`}
-                            />
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
-                            <button onClick={() => openEditItem(i)} title="Modifier" aria-label="Modifier" className="text-brand-600 hover:text-brand-800">
-                              <Pencil className="h-4 w-4" aria-hidden />
-                            </button>
-                            <button onClick={() => handleDeleteItem(i)} title="Supprimer" aria-label="Supprimer" className="text-brand-600 hover:text-brand-800">
-                              <Trash2 className="h-4 w-4" aria-hidden />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {items.map((i) => <article key={i.id}
+                  draggable={dragEnabled}
+                  onDragStart={() => dragEnabled && setDraggingId(i.id)}
+                  onDragOver={(e) => dragEnabled && e.preventDefault()}
+                  onDrop={() => dragEnabled && handleItemDrop(supplier, category, i.id)}
+                  onDragEnd={() => setDraggingId(null)}
+                  className={`rounded-2xl border bg-white p-4 ${i.orderedAt && !i.receivedAt ? "border-orange-200" : "border-gray-200"} ${draggingId === i.id ? "opacity-40" : ""}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0"><h4 className="whitespace-pre-line text-sm font-semibold text-gray-900">{i.designation}</h4><p className="mt-1 text-xs leading-5 text-gray-400">{i.packaging || "Conditionnement à préciser"}{i.reference && !isUrl(i.reference) ? ` · Réf. ${i.reference}` : ""}</p></div>
+                    <div className="flex shrink-0 gap-1"><button className="rounded-lg p-2 text-gray-400 hover:bg-brand-50 hover:text-brand-600" onClick={() => openEditItem(i)} aria-label={`Modifier ${i.designation}`}><Pencil className="h-4 w-4" /></button><button className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600" onClick={() => handleDeleteItem(i)} aria-label={`Supprimer ${i.designation}`}><Trash2 className="h-4 w-4" /></button></div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2"><div><span className="block text-[10px] uppercase tracking-wide text-gray-400">Unité HT</span><span className="text-sm font-semibold">{i.unitPriceHT != null ? `${i.unitPriceHT.toFixed(2)} €` : "—"}</span></div><div><span className="block text-[10px] uppercase tracking-wide text-gray-400">Colis HT</span><span className="text-sm font-semibold">{i.casePriceHT != null ? `${i.casePriceHT.toFixed(2)} €` : "—"}</span></div>{isUrl(i.reference) && <a href={i.reference} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-brand-600"><ExternalLink className="h-3 w-3" />Voir l’article</a>}</div>
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3"><label className="flex items-center gap-2 text-xs text-gray-500">À commander<input aria-label={`Quantité à commander : ${i.designation}`} type="number" step="any" min="0" disabled={!!i.orderedAt && !i.receivedAt} defaultValue={i.orderQuantity} key={`${i.id}-${i.orderQuantity}`} onBlur={(e) => { const n = Number(e.target.value); if (Number.isFinite(n) && n >= 0 && n !== i.orderQuantity) updateItem(i, { orderQuantity: n, ...(i.receivedAt ? { orderedAt: null, receivedAt: null } : {}) }); }} className="w-20 !text-sm" /></label><span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${i.receivedAt ? "bg-green-50 text-green-700" : i.orderedAt ? "bg-orange-50 text-orange-700" : i.orderQuantity > 0 ? "bg-brand-50 text-brand-700" : "bg-gray-50 text-gray-400"}`}>{i.receivedAt ? "Reçu" : i.orderedAt ? "En attente de réception" : i.orderQuantity > 0 ? "À commander" : "Au catalogue"}</span></div>
+                  {(i.orderedAt || i.receivedAt) && <div className="mt-3 grid gap-3 sm:grid-cols-2"><label className="text-[10px] text-gray-400">Commandé le<input type="date" aria-label={`Date de commande : ${i.designation}`} value={toDateInputValue(i.orderedAt)} onChange={(e) => handleDateChange(i, "orderedAt", e.target.value)} className="mt-1 w-full !text-xs" /></label><label className="text-[10px] text-gray-400">Reçu le<input type="date" aria-label={`Date de réception : ${i.designation}`} value={toDateInputValue(i.receivedAt)} onChange={(e) => handleDateChange(i, "receivedAt", e.target.value)} className="mt-1 w-full !text-xs" /></label>{i.orderedAt && !i.receivedAt && <button className="rounded-lg bg-green-50 px-3 py-2 text-xs font-medium text-green-700 sm:col-span-2" onClick={() => handleDateChange(i, "receivedAt", todayISO())}>Marquer comme reçu</button>}</div>}
+                </article>)}
               </div>
             </div>
           ))}
@@ -856,15 +699,15 @@ export function MercurialeClient() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">Mercuriale</h1>
-        <div className="flex gap-2">
+      <div className="mb-7 flex flex-wrap items-start justify-between gap-4">
+        <div><p className="mb-2 text-xs font-semibold uppercase tracking-widest text-brand-600">Vos achats, plus simplement</p><h1 className="text-3xl font-semibold tracking-tight text-gray-900">Mercuriale</h1><p className="mt-2 text-sm text-gray-500">Votre catalogue, vos prix et les livraisons à réceptionner.</p></div>
+        <div className="flex flex-wrap gap-2">
           <Link
             href="/mercuriale/a-commander"
             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <ClipboardList className="h-4 w-4" aria-hidden />
-            À commander
+            Préparer une commande
             {toOrderCount > 0 && (
               <span className="ml-1.5 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-semibold text-orange-700">
                 {toOrderCount}
@@ -885,6 +728,9 @@ export function MercurialeClient() {
           </button>
         </div>
       </div>
+
+      {error && !showSupplierForm && !showItemForm && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-gray-200 bg-white p-3">{[{ key: "ALL", label: `Catalogue · ${suppliers.reduce((n, s) => n + s.items.length, 0)}` }, { key: "TO_ORDER", label: `À commander · ${toOrderCount}` }, { key: "PENDING", label: `À réceptionner · ${suppliers.reduce((n, s) => n + pendingCount(s), 0)}` }].map((f) => <button key={f.key} onClick={() => setStatusFilter(f.key)} className={`rounded-xl px-4 py-2 text-sm font-medium ${statusFilter === f.key ? "bg-brand-50 text-brand-700" : "text-gray-500 hover:bg-gray-50"}`}>{f.label}</button>)}<select aria-label="Trier les articles" value={sortKey} onChange={(e) => { setSortKey(e.target.value as ItemSortKey); setSortDir("asc"); }} className="ml-auto !text-sm"><option value="custom">Ordre personnalisé</option><option value="designation">Nom A → Z</option><option value="unitPriceHT">Prix unitaire croissant</option><option value="casePriceHT">Prix colis croissant</option></select></div>
 
       {categoryMode ? (
         <>

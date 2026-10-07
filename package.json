@@ -5,14 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "prisma migrate deploy && next start",
+    "start": "prisma migrate deploy && npm run import:marketing && next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
     "seed": "tsx prisma/seed.ts",
     "seed:menu": "tsx prisma/seed-menu.ts",
     "seed:mercuriale": "tsx prisma/seed-mercuriale.ts",
     "seed:architecture": "tsx prisma/seed-architecture.ts",
-    "migrate": "prisma migrate dev"
+    "migrate": "prisma migrate dev",
+    "import:marketing": "node --import tsx scripts/import-marketing.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

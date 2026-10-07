@@ -3,20 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  UtensilsCrossed,
   LayoutDashboard,
   TrendingUp,
   Package,
   Users,
   CalendarDays,
   Hash,
-  LifeBuoy,
+  NotebookPen,
   Megaphone,
   Settings,
   LogOut,
   Menu,
   X,
 } from "lucide-react";
+import { Brand } from "@/components/Brand";
 import { SettingsModal } from "./SettingsModal";
 import { RestaurantSwitcher } from "./RestaurantSwitcher";
 import { SidebarNavItem } from "./SidebarNavItem";
@@ -59,7 +59,7 @@ export function Sidebar({
     { href: "/clients", label: "Clients", icon: Users, visible: isAdmin || canAccessCrm },
     { href: "/planning", label: "Planning", icon: CalendarDays, visible: true },
     { href: "/canaux", label: "Canaux", icon: Hash, visible: true },
-    { href: "/tickets", label: "Tickets", icon: LifeBuoy, visible: true },
+    { href: "/notes", label: "Notes & tâches", icon: NotebookPen, visible: true },
     { href: "/marketing", label: "Marketing", icon: Megaphone, visible: isAdmin || canAccessMarketing },
   ];
   const visibleTabs = TABS.filter((tab) => tab.visible);
@@ -89,10 +89,7 @@ export function Sidebar({
     return (
       <div className="flex h-full w-full flex-col">
         <div className="flex items-center gap-3 px-5 pb-6 pt-7">
-          <UtensilsCrossed className="h-10 w-10 shrink-0 rounded-2xl bg-white/10 p-2.5 text-white" aria-hidden />
-          <span className="truncate text-xl font-semibold tracking-tight text-white">
-            Amoné
-          </span>
+          <div className="text-white"><Brand /></div>
         </div>
 
         {restaurants.length > 1 && (
@@ -151,8 +148,7 @@ export function Sidebar({
 
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
         <span className="flex items-center gap-2 text-lg font-bold text-brand-700">
-          <UtensilsCrossed className="h-5 w-5" aria-hidden />
-          Amoné
+          <Brand compact />
         </span>
         <button
           onClick={() => setMobileOpen(true)}

@@ -1,5 +1,2 @@
-import { redirect } from "next/navigation";
-
-export default function MarketingPage() {
-  redirect("/marketing/campagnes");
-}
+import { WorkspaceClient } from "@/components/WorkspaceClient";
+export default function MarketingPage() { return <WorkspaceClient area="MARKETING" />; }

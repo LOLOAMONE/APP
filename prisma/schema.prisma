@@ -49,6 +49,7 @@ model Restaurant {
   editorialPosts       EditorialPost[]
   dashboardWidgets     DashboardWidget[]
   pages                Page[]
+  workspaceItems       WorkspaceItem[]
   projects             Project[]
 }
 
@@ -613,4 +614,23 @@ model TaskDependency {
   dependsOnTask   Task   @relation("PrerequisiteTask", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
 
   @@unique([taskId, dependsOnTaskId])
+}
+
+// Notes personnelles, tâches restaurant et calendrier marketing.
+model WorkspaceItem {
+  id            String     @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  area          String     @default("NOTES") // NOTES | MARKETING
+  kind          String     @default("NOTE") // NOTE | TASK | IDEA | POST
+  title         String
+  body          String     @default("")
+  scheduledDate String?    // YYYY-MM-DD, date civile du restaurant
+  completed     Boolean    @default(false)
+  pinned        Boolean    @default(false)
+  archived      Boolean    @default(false)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([restaurantId, area, archived])
 }

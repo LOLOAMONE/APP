@@ -47,3 +47,18 @@ export const DELETE = withErrorHandling(
     return NextResponse.json({ ok: true });
   }
 );
+
+// Mise à jour ciblée : conserve les prix, catégories et dates non modifiés.
+export const PATCH = withErrorHandling(async (req: NextRequest, { params }: { params: { id: string } }) => {
+  const session = await requireMercurialeAccess();
+  const existing = await prisma.supplierItem.findFirst({ where: { id: params.id, supplier: { restaurantId: session.activeRestaurantId } } });
+  if (!existing) return NextResponse.json({ error: "Article introuvable" }, { status: 404 });
+  const data = itemSchema.partial().parse(await req.json());
+  const { orderedAt, receivedAt, ...rest } = data;
+  const item = await prisma.supplierItem.update({ where: { id: params.id }, data: {
+    ...rest,
+    ...(orderedAt !== undefined ? { orderedAt: orderedAt ? new Date(orderedAt) : null } : {}),
+    ...(receivedAt !== undefined ? { receivedAt: receivedAt ? new Date(receivedAt) : null } : {}),
+  } });
+  return NextResponse.json(item);
+});

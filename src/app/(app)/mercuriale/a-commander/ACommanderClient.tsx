@@ -1,222 +1,78 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
-import { Modal } from "@/components/Modal";
+import { Check, Copy, Mail, Search, ShoppingBag } from "lucide-react";
 
-type SupplierItem = {
-  id: string;
-  reference: string | null;
-  designation: string;
-  packaging: string | null;
-  orderQuantity: number;
-  unitPriceHT: number | null;
-  orderedAt: string | null;
-  receivedAt: string | null;
-};
-
-type Supplier = {
-  id: string;
-  name: string;
-  items: SupplierItem[];
-};
-
-function isUrl(value: string | null): value is string {
-  return !!value && /^https?:\/\//i.test(value);
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+type Item = { id: string; designation: string; reference: string | null; packaging: string | null; orderQuantity: number; unitPriceHT: number | null; casePriceHT: number | null; orderedAt: string | null; receivedAt: string | null };
+type Supplier = { id: string; name: string; email: string | null; clientCode: string | null; orderSchedule: string | null; minimumOrder: string | null; items: Item[] };
+const button = "inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40";
 
 export function ACommanderClient() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [supplierId, setSupplierId] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [showConfirmAll, setShowConfirmAll] = useState(false);
-  const [markingAll, setMarkingAll] = useState(false);
-
-  async function load() {
-    setLoading(true);
-    const res = await fetch("/api/suppliers");
-    if (res.ok) setSuppliers(await res.json());
-    setLoading(false);
-  }
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [delivery, setDelivery] = useState("");
+  const [comment, setComment] = useState("");
+  const [restaurantName, setRestaurantName] = useState("Mon restaurant");
+  const [mailSupplierId, setMailSupplierId] = useState("");
 
   useEffect(() => {
-    load();
+    (async () => {
+      try {
+        const res = await fetch("/api/suppliers");
+        if (!res.ok) throw new Error("Impossible de charger les articles.");
+        const data: Supplier[] = await res.json(); setSuppliers(data);
+        const pending = data.flatMap((s) => s.items.filter((i) => i.orderQuantity > 0 && !i.orderedAt));
+        setSelected(new Set(pending.map((i) => i.id)));
+        setQuantities(Object.fromEntries(data.flatMap((s) => s.items.map((i) => [i.id, String(i.orderQuantity > 0 && !i.orderedAt ? i.orderQuantity : 1)]))));
+        const me = await fetch("/api/auth/me"); if (me.ok) { const u = await me.json(); setRestaurantName(u.restaurants?.find((r: { id: string }) => r.id === u.activeRestaurantId)?.name ?? "Mon restaurant"); }
+      } catch (e) { setError(e instanceof Error ? e.message : "Connexion indisponible."); }
+      finally { setLoading(false); }
+    })();
   }, []);
-
-  const rows = useMemo(() => {
-    const list: { supplier: Supplier; item: SupplierItem }[] = [];
-    for (const supplier of suppliers) {
-      for (const item of supplier.items) {
-        if (item.orderQuantity > 0 && !item.orderedAt) {
-          list.push({ supplier, item });
-        }
-      }
-    }
-    return list.sort(
-      (a, b) => a.supplier.name.localeCompare(b.supplier.name) || a.item.designation.localeCompare(b.item.designation)
-    );
-  }, [suppliers]);
-
-  async function markOrdered(item: SupplierItem) {
-    setSavingId(item.id);
-    setSuppliers((prev) =>
-      prev.map((s) => ({ ...s, items: s.items.map((i) => (i.id === item.id ? { ...i, orderedAt: todayISO() } : i)) }))
-    );
-    await fetch(`/api/supplier-items/${item.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        reference: item.reference,
-        designation: item.designation,
-        packaging: item.packaging,
-        orderQuantity: item.orderQuantity,
-        unitPriceHT: item.unitPriceHT,
-        orderedAt: todayISO(),
-        receivedAt: item.receivedAt,
-      }),
-    });
-    setSavingId(null);
-    await load();
+  const rows = useMemo(() => suppliers.flatMap((supplier) => supplier.items.map((item) => ({ supplier, item }))), [suppliers]);
+  const chosen = rows.filter(({ item }) => selected.has(item.id));
+  const groups = suppliers.map((s) => ({ supplier: s, rows: chosen.filter((r) => r.supplier.id === s.id) })).filter((g) => g.rows.length);
+  const mailGroup = groups.find((g) => g.supplier.id === mailSupplierId) ?? groups[0];
+  const visible = rows.filter(({ supplier, item }) => (!supplierId || supplier.id === supplierId) && `${item.designation} ${item.reference ?? ""} ${supplier.name}`.toLowerCase().includes(search.toLowerCase()));
+  const clearIds = rows.filter(({ item }) => item.orderQuantity > 0 && !item.orderedAt && !selected.has(item.id)).map(({ item }) => item.id);
+  const valid = (chosen.length > 0 || clearIds.length > 0) && chosen.every(({ item }) => Number.isFinite(Number(quantities[item.id])) && Number(quantities[item.id]) > 0);
+  const mailValid = !!mailGroup && mailGroup.rows.every(({ item }) => Number.isFinite(Number(quantities[item.id])) && Number(quantities[item.id]) > 0);
+  const body = mailGroup ? ["Bonjour,", "", `Voici notre commande pour ${restaurantName}${mailGroup.supplier.clientCode ? ` (code client : ${mailGroup.supplier.clientCode})` : ""}.`, delivery ? `Livraison souhaitée : ${new Date(`${delivery}T12:00:00`).toLocaleDateString("fr-FR")}.` : "", "", ...mailGroup.rows.map(({ item }) => `• ${quantities[item.id] || "?"} × ${item.designation}${item.packaging ? ` — ${item.packaging}` : ""}${item.reference && !/^https?:\/\//i.test(item.reference) ? ` (réf. ${item.reference})` : ""}`), "", comment, "Merci de nous confirmer la disponibilité et la livraison.", "", "Bonne journée,", restaurantName].filter((v, i, a) => v !== "" || a[i - 1] !== "").join("\n") : "";
+  const subject = `Commande ${restaurantName}${delivery ? ` — ${delivery}` : ""}`;
+  function toggle(id: string) { setSelected((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; }); setNotice(""); }
+  async function copy() {
+    try { await navigator.clipboard.writeText(`Objet : ${subject}\n\n${body}`); setNotice("Texte copié. Collez-le dans votre mail."); }
+    catch { setError("Le navigateur n’a pas autorisé la copie. Sélectionnez le texte du mail ci-dessous et copiez-le."); }
   }
-
-  async function markAllOrdered() {
-    setMarkingAll(true);
-    await Promise.all(
-      rows.map(({ item }) =>
-        fetch(`/api/supplier-items/${item.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            reference: item.reference,
-            designation: item.designation,
-            packaging: item.packaging,
-            orderQuantity: item.orderQuantity,
-            unitPriceHT: item.unitPriceHT,
-            orderedAt: todayISO(),
-            receivedAt: item.receivedAt,
-          }),
-        })
-      )
-    );
-    setMarkingAll(false);
-    setShowConfirmAll(false);
-    await load();
+  async function save(action: "PREPARE" | "ORDERED", onlySupplier = false) {
+    const list = onlySupplier ? mailGroup?.rows ?? [] : chosen;
+    if (!list.length && (action !== "PREPARE" || !clearIds.length)) return;
+    if (action === "ORDERED" && !confirm(`La commande de ${mailGroup?.supplier.name} a bien été envoyée ? Les ${list.length} articles passeront en attente de réception.`)) return;
+    setBusy(true); setError("");
+    try {
+      const res = await fetch("/api/supplier-orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, clearIds: action === "PREPARE" ? clearIds : [], items: list.map(({ item }) => ({ id: item.id, quantity: Number(quantities[item.id]) })) }) });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error ?? "Enregistrement impossible."); }
+      const changed = new Map(list.map(({ item }) => [item.id, Number(quantities[item.id])]));
+      setSuppliers((prev) => prev.map((supplier) => ({ ...supplier, items: supplier.items.map((item) => changed.has(item.id) ? { ...item, orderQuantity: changed.get(item.id)!, orderedAt: action === "ORDERED" ? new Date().toISOString() : null, receivedAt: null } : clearIds.includes(item.id) && action === "PREPARE" ? { ...item, orderQuantity: 0 } : item) })));
+      if (action === "ORDERED") { const ids = new Set(list.map(({ item }) => item.id)); setSelected((prev) => new Set([...prev].filter((id) => !ids.has(id)))); }
+      setNotice(action === "ORDERED" ? "Commande enregistrée. Retrouvez ces articles dans le suivi des réceptions." : "Sélection enregistrée dans les articles à commander.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Connexion indisponible."); }
+    finally { setBusy(false); }
   }
-
-  return (
-    <div>
-      <div className="mb-4 flex flex-col items-start justify-between gap-4 sm:flex-row">
-        <div>
-          <Link href="/mercuriale" className="text-sm text-brand-600 hover:text-brand-800">
-            ← Retour à la Mercuriale
-          </Link>
-          <h1 className="mt-1 text-xl font-bold text-gray-900">Commande à faire</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Tous les articles avec une quantité à commander, tous fournisseurs confondus. Coche « Commandé » une fois
-            la commande passée — la date est enregistrée automatiquement et l&apos;article rejoint le suivi de
-            réception dans la Mercuriale.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowConfirmAll(true)}
-          disabled={rows.length === 0}
-          className="whitespace-nowrap rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Supprimer toutes les commandes
-        </button>
-      </div>
-
-      {showConfirmAll && (
-        <Modal title="Confirmer" onClose={() => setShowConfirmAll(false)}>
-          <p className="text-sm text-gray-700">
-            Marquer les {rows.length} article{rows.length > 1 ? "s" : ""} comme commandé{rows.length > 1 ? "s" : ""}{" "}
-            ? Ils disparaîtront de cette liste et rejoindront le suivi de réception dans la Mercuriale.
-          </p>
-          <div className="mt-4 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShowConfirmAll(false)}
-              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              onClick={markAllOrdered}
-              disabled={markingAll}
-              className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
-            >
-              {markingAll ? "Enregistrement..." : "Confirmer"}
-            </button>
-          </div>
-        </Modal>
-      )}
-
-      {loading ? (
-        <p className="text-sm text-gray-500">Chargement...</p>
-      ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table>
-            <thead>
-              <tr>
-                <th>Commandé</th>
-                <th>Fournisseur</th>
-                <th>Lien</th>
-                <th>Désignation</th>
-                <th>Conditionnement</th>
-                <th>Quantité</th>
-                <th>Prix U. HT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ supplier, item }) => (
-                <tr key={item.id}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={false}
-                      disabled={savingId === item.id}
-                      onChange={() => markOrdered(item)}
-                      className="h-4 w-4"
-                      aria-label="Marquer comme commandé"
-                    />
-                  </td>
-                  <td className="text-gray-500">{supplier.name}</td>
-                  <td>
-                    {isUrl(item.reference) && (
-                      <a
-                        href={item.reference}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                        Voir
-                      </a>
-                    )}
-                  </td>
-                  <td className="max-w-xs whitespace-pre-line font-medium">{item.designation}</td>
-                  <td className="text-gray-500">{item.packaging || "—"}</td>
-                  <td>{item.orderQuantity}</td>
-                  <td>{item.unitPriceHT != null ? `${item.unitPriceHT.toFixed(2)} €` : "—"}</td>
-                </tr>
-              ))}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="py-6 text-center text-gray-400">
-                    Rien à commander pour l&apos;instant.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
+  return <div>
+    <Link href="/mercuriale" className="text-sm text-brand-600">← Retour au catalogue</Link>
+    <div className="mb-7 mt-4 flex flex-wrap items-start justify-between gap-4"><div><p className="mb-2 text-xs font-semibold uppercase tracking-widest text-brand-600">Du catalogue au mail</p><h1 className="text-3xl font-semibold tracking-tight">Préparer une commande</h1><p className="mt-2 text-sm text-gray-500">Choisissez vos articles, ajustez les quantités, puis copiez le mail de chaque fournisseur.</p></div><button onClick={() => save("PREPARE")} disabled={!valid || busy} className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-40">{busy ? "Enregistrement…" : "Enregistrer la sélection"}</button></div>
+    {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</p>}{notice && <p role="status" className="mb-4 rounded-xl bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
+    <div className="mb-5 grid gap-3 sm:grid-cols-3">{[{ label: "Articles sélectionnés", value: chosen.length }, { label: "Fournisseurs", value: groups.length }, { label: "Étapes", value: "Choisir · Copier · Envoyer" }].map((v) => <div key={v.label} className="rounded-2xl border border-gray-200 bg-white p-4"><p className="text-xs text-gray-400">{v.label}</p><p className="mt-2 text-lg font-semibold text-brand-800">{v.value}</p></div>)}</div>
+    <div className="grid items-start gap-5 xl:grid-cols-[1fr_400px]"><section className="min-w-0 rounded-2xl border border-gray-200 bg-white p-4 sm:p-5"><div className="mb-4 flex flex-wrap gap-3"><label className="flex min-w-0 flex-1 items-center gap-2"><Search className="h-4 w-4 text-gray-400" /><input aria-label="Rechercher un article" placeholder="Article, référence…" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full" /></label><select aria-label="Fournisseur" value={supplierId} onChange={(e) => setSupplierId(e.target.value)}><option value="">Tous les fournisseurs</option>{suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div><div className="mb-4 flex flex-wrap gap-3 text-xs"><button className="text-brand-600" onClick={() => setSelected((prev) => new Set([...prev, ...visible.filter(({ item }) => !item.orderedAt || !!item.receivedAt).map(({ item }) => item.id)]))}>Sélectionner les articles affichés</button><button className="text-gray-400" onClick={() => setSelected(new Set())}>Vider la sélection</button></div>
+      {loading ? <p className="p-8 text-sm text-gray-400">Chargement…</p> : <div className="space-y-2">{visible.map(({ supplier, item }) => <div key={item.id} className={`flex items-start gap-3 rounded-xl border p-3 ${selected.has(item.id) ? "border-brand-200 bg-brand-50/40" : "border-gray-100"}`}><input aria-label={`Sélectionner ${item.designation}`} type="checkbox" checked={selected.has(item.id)} disabled={!!item.orderedAt && !item.receivedAt} onChange={() => toggle(item.id)} className="mt-1 h-5 w-5 shrink-0" /><div className="min-w-0 flex-1"><button disabled={!!item.orderedAt && !item.receivedAt} onClick={() => toggle(item.id)} className="text-left text-sm font-semibold">{item.designation}</button><p className="mt-1 text-xs leading-5 text-gray-400">{supplier.name} · {item.packaging || "Conditionnement non renseigné"}</p>{item.orderedAt && !item.receivedAt && <p className="mt-1 text-xs text-orange-600">Une commande est déjà en attente de réception</p>}</div><label className="text-[10px] text-gray-400">Quantité<input aria-label={`Quantité ${item.designation}`} type="number" min="0.01" step="any" value={quantities[item.id] ?? "1"} disabled={!selected.has(item.id)} onChange={(e) => setQuantities((q) => ({ ...q, [item.id]: e.target.value }))} className="mt-1 block w-20 !text-sm" /></label></div>)}{visible.length === 0 && <p className="p-8 text-center text-sm text-gray-400">Aucun article trouvé.</p>}</div>}
+    </section><aside className="min-w-0 rounded-2xl border border-gray-200 bg-white p-5 xl:sticky xl:top-6"><div className="mb-4 flex items-center gap-2"><Mail className="h-5 w-5 text-brand-600" /><h2 className="font-semibold">Votre mail de commande</h2></div>{!mailGroup ? <div className="py-12 text-center"><ShoppingBag className="mx-auto mb-3 h-8 w-8 text-brand-200" /><p className="text-sm text-gray-400">Sélectionnez des articles pour préparer le mail.</p></div> : <><select aria-label="Fournisseur du mail" className="mb-4 w-full" value={mailGroup.supplier.id} onChange={(e) => setMailSupplierId(e.target.value)}>{groups.map((g) => <option key={g.supplier.id} value={g.supplier.id}>{g.supplier.name} · {g.rows.length} articles</option>)}</select><div className="mb-4 space-y-1 text-xs leading-5 text-gray-500">{mailGroup.supplier.email && <p>À : {mailGroup.supplier.email}</p>}{mailGroup.supplier.orderSchedule && <p>{mailGroup.supplier.orderSchedule}</p>}{mailGroup.supplier.minimumOrder && <p>Minimum / franco : {mailGroup.supplier.minimumOrder}</p>}</div><label className="mb-4 block text-xs font-medium text-gray-500">Livraison souhaitée<input type="date" value={delivery} onChange={(e) => setDelivery(e.target.value)} className="mt-2 w-full" /></label><label className="mb-4 block text-xs font-medium text-gray-500">Message complémentaire<textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={2} className="mt-2 w-full" placeholder="Instructions de livraison…" /></label><p className="mb-2 break-words text-xs font-semibold">Objet : {subject}</p><textarea aria-label="Texte du mail à copier" value={body} readOnly rows={12} className="w-full !bg-gray-50 !text-xs !leading-6" /><div className="mt-4 flex flex-wrap gap-2"><button className={button} disabled={!mailValid} onClick={copy}><Copy className="h-4 w-4" />Copier le mail</button>{mailGroup.supplier.email && mailValid && <a className={button} href={`mailto:${encodeURIComponent(mailGroup.supplier.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}><Mail className="h-4 w-4" />Ouvrir un mail</a>}</div><div className="mt-5 border-t border-gray-100 pt-4"><button className={`${button} w-full`} disabled={!mailValid || busy} onClick={() => save("ORDERED", true)}><Check className="h-4 w-4" />Commande envoyée</button><p className="mt-2 text-xs leading-5 text-gray-400">La copie prépare le texte. Marquez la commande comme envoyée après l’avoir passée.</p></div></>}</aside></div>
+  </div>;
 }

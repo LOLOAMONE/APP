@@ -104,30 +104,6 @@ export async function requireCrmAccess(): Promise<SessionWithActiveRestaurant> {
   return requireModuleAccess("crm");
 }
 
-function hasGlobalTicketAccess(user: SessionPayload): boolean {
-  return user.isSuperAdmin || user.globalModules.includes("ticketing");
-}
-
-export type TicketScope = { global: true } | { global: false; restaurantId: string };
-
-/** Les tickets sont toujours limités au restaurant actif. */
-export async function requireTicketAccess(): Promise<SessionPayload & { ticketScope: TicketScope }> {
-  const user = await requireUser();
-  if (!user.activeRestaurantId) {
-    throw new Error("NO_ACTIVE_RESTAURANT");
-  }
-  return { ...user, ticketScope: { global: false, restaurantId: user.activeRestaurantId } };
-}
-
-/** Réservé à la maison mère : SUPER_ADMIN ou module transverse "ticketing" (ex: changer le statut d'un ticket). */
-export async function requireGlobalTicketAccess(): Promise<SessionPayload> {
-  const user = await requireUser();
-  if (!hasGlobalTicketAccess(user)) {
-    throw new Error("FORBIDDEN");
-  }
-  return user;
-}
-
 function hasGlobalMarketingAccess(user: SessionPayload): boolean {
   return user.isSuperAdmin || user.globalModules.includes("marketing");
 }
