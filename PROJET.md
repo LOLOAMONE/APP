@@ -66,11 +66,11 @@ Ingrédients, Produits et Menus partagent : tri par colonne, ordre personnalisé
 
 ### Clients / CRM (`/clients`)
 
-CRM léger pour les clients **entreprises et événements** (séminaires, privatisations, groupes) — distinct des clients du quotidien qui ne sont pas suivis nommément.
+Carnet clients simple pour les habitués, voisins et contacts d’entreprise. `/clients` affiche la liste et ouvre une fiche consultable/modifiable. Coordonnées, adresse postale, canal préféré, accords de communication, étiquettes, notes, relances et anniversaire jour/mois. Actions Mail, WhatsApp et copie de l’adresse ; aucun envoi automatique.
 
-- **Entreprises** (`CrmCompany`) — fiches société (secteur, adresse, contact, notes).
+- **Entreprises historiques** (`CrmCompany`) — fiches société conservées et liens existants maintenus ; route `/clients/entreprises` toujours disponible.
 - **Contacts** (`CrmContact`) — personnes, rattachées ou non à une entreprise.
-- **Événements** (`CrmOpportunity`) — pipeline en Kanban avec 5 étapes (`Prospect` → `Devis envoyé` → `Confirmé` → `Réalisé` / `Perdu`), glisser-déposer entre colonnes et au sein d'une colonne, montant estimé, date d'événement, nombre d'invités.
+- **Événements historiques** (`CrmOpportunity`, `/clients/evenements`) — pipeline en Kanban avec 5 étapes (`Prospect` → `Devis envoyé` → `Confirmé` → `Réalisé` / `Perdu`), glisser-déposer entre colonnes et au sein d'une colonne, montant estimé, date d'événement, nombre d'invités.
 
 ### Planning (`/planning`)
 
@@ -116,7 +116,7 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 | `Menu` / `MenuItem` | Bundles de produits |
 | `Supplier` / `SupplierItem` / `PackagingUnit` | Mercuriale (fournisseurs, articles, conditionnements) |
 | `Shift` / `Absence` | Planning et congés |
-| `CrmCompany` / `CrmContact` / `CrmOpportunity` | CRM entreprises/événements |
+| `CrmCompany` / `CrmContact` / `CrmOpportunity` | Carnet clients et données entreprises/événements conservées |
 | `Ticket` / `TicketMessage` | Données historiques conservées, module retiré |
 | `Channel` / `ChannelMessage` | Canaux internes par restaurant + fil de messages |
 | `Campaign` / `CampaignRestaurant` / `Coupon` / `CouponRedemption` | Campagnes marketing national/local + coupons |
