@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 
 type Employee = {
@@ -120,7 +120,9 @@ export function EmployeesClient() {
       {loading ? (
         <p className="text-sm text-gray-500">Chargement...</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+        <div>
+        <div className="space-y-3 sm:hidden">{sortedEmployees.map((emp) => <article key={emp.id} className="rounded-xl border border-gray-200 bg-white p-4"><h2 className="font-semibold">{emp.name}</h2><p className="mt-1 text-sm text-gray-500">{emp.position} · {emp.hourlyRate != null ? `${emp.hourlyRate.toFixed(2)} €/h` : "Taux non renseigné"}</p><p className="mt-2 text-xs text-gray-500">{emp.templateDaysCount} jour(s) de base configuré(s)</p><Link href={`/planning/employes/${emp.id}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-brand-700"><Pencil className="h-4 w-4" />Modifier la fiche et les jours off</Link></article>)}</div>
+        <div className="hidden overflow-x-auto rounded-lg border border-gray-200 bg-white sm:block">
           <table>
             <thead>
               <tr>
@@ -158,6 +160,7 @@ export function EmployeesClient() {
                   </td>
                   <td>
                     <div className="flex justify-end gap-3 whitespace-nowrap text-sm">
+                      <Link href={`/planning/employes/${emp.id}`} className="flex items-center gap-1 font-medium text-brand-700"><Pencil className="h-4 w-4" />Modifier</Link>
                       <button onClick={() => handleDelete(emp)} title="Supprimer" aria-label="Supprimer" className="text-brand-600 hover:text-brand-800">
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </button>
@@ -174,6 +177,7 @@ export function EmployeesClient() {
               )}
             </tbody>
           </table>
+        </div>
         </div>
       )}
 

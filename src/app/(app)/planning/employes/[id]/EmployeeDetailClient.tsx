@@ -11,6 +11,9 @@ type Employee = {
   name: string;
   position: string;
   hourlyRate: number | null;
+  username: string | null;
+  restDays: number[];
+  weeklyHours: number | null;
 };
 
 export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
@@ -19,11 +22,12 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  const [form, setForm] = useState({ name: "", position: "", hourlyRate: "", username: "", password: "" });
+  const [form, setForm] = useState({ name: "", position: "", hourlyRate: "", weeklyHours: "", username: "", password: "" });
   const [infoError, setInfoError] = useState<string | null>(null);
   const [savingInfo, setSavingInfo] = useState(false);
   const [infoSaved, setInfoSaved] = useState(false);
 
+  const [restDays, setRestDays] = useState<number[]>([]);
   const [template, setTemplate] = useState<TemplateDay[]>(emptyTemplate());
   const [templateError, setTemplateError] = useState<string | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
@@ -45,11 +49,13 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
     if (empRes.ok) {
       const emp: Employee = await empRes.json();
       setEmployee(emp);
+      setRestDays(emp.restDays);
       setForm({
         name: emp.name,
         position: emp.position,
         hourlyRate: emp.hourlyRate != null ? String(emp.hourlyRate) : "",
-        username: "",
+        weeklyHours: emp.weeklyHours != null ? String(emp.weeklyHours) : "",
+        username: emp.username ?? "",
         password: "",
       });
     }
@@ -88,6 +94,7 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: form.name,
+          weeklyHours: form.weeklyHours ? Number(form.weeklyHours) : null,
           position: form.position,
           hourlyRate: form.hourlyRate ? parseFloat(form.hourlyRate) : null,
           ...(form.username ? { username: form.username } : {}),
@@ -120,7 +127,7 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
       const res = await fetch(`/api/employees/${employeeId}/schedule-template`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries }),
+        body: JSON.stringify({ entries, restDays }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -178,7 +185,7 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
 
       <form onSubmit={handleSaveInfo} className="mb-6 space-y-4 rounded-lg border border-gray-200 bg-white p-4">
         <h2 className="text-sm font-semibold text-gray-900">Informations</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Nom</label>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full" required />
@@ -205,18 +212,22 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
           />
         </div>
 
+        <div><label className="mb-1 block text-sm font-medium">Heures hebdomadaires de référence</label><input aria-label="Heures hebdomadaires de référence" type="number" step="0.5" min="0" max="168" value={form.weeklyHours} onChange={(e) => setForm({ ...form, weeklyHours: e.target.value })} className="w-full sm:w-48" /><p className="mt-1 text-xs text-gray-500">Pour comparer les heures prévues avec le rythme habituel.</p></div>
         <div className="border-t border-gray-100 pt-3">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-gray-400">
-            Accès à l&apos;application (laisser vide pour ne pas changer)
+            Accès à l&apos;application
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          {!employee.username && <p className="mb-2 text-xs text-gray-500">Aucun compte lié à cette fiche.</p>}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Identifiant</label>
-              <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="w-full" />
+              <input disabled={!employee.username} autoComplete="username" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="w-full" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Mot de passe</label>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Nouveau mot de passe (facultatif)</label>
               <input
+                disabled={!employee.username}
+                autoComplete="new-password"
                 type="password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
@@ -252,7 +263,8 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
           {DAY_LABELS.map((label, index) => {
             const day = template[index];
             return <fieldset key={label} disabled={savingTemplate} className={`rounded-2xl border p-4 ${day.enabled ? "border-brand-100 bg-brand-50/30" : "border-gray-100 bg-gray-50"}`}>
-              <label className="flex items-center gap-3 text-sm font-semibold"><input type="checkbox" checked={day.enabled} onChange={(e) => updateTemplateDay(index, { enabled: e.target.checked })} className="h-4 w-4 accent-brand-600" />{label}<span className="ml-auto text-xs font-normal text-gray-500">{day.enabled ? "Travaillé" : "Non planifié"}</span></label>
+              <label className="flex items-center gap-3 text-sm font-semibold"><input type="checkbox" disabled={restDays.includes(index)} checked={day.enabled} onChange={(e) => updateTemplateDay(index, { enabled: e.target.checked })} className="h-4 w-4 accent-brand-600" />{label}<span className="ml-auto text-xs font-normal text-gray-500">{day.enabled ? "Travaillé" : restDays.includes(index) ? "Repos" : "Non planifié"}</span></label>
+              <label className="mt-3 flex items-center gap-2 text-xs text-gray-600"><input type="checkbox" checked={restDays.includes(index)} onChange={(e) => { setRestDays((days) => e.target.checked ? [...days, index] : days.filter((d) => d !== index)); if (e.target.checked) updateTemplateDay(index, { enabled: false }); setTemplateSaved(false); }} />Jour off habituel</label>
               {day.enabled && <div className="mt-4 space-y-3">{day.slots.map((slot, slotIndex) => <div key={slotIndex} className="flex items-end gap-2">
                 <div className="grid min-w-0 flex-1 grid-cols-2 gap-3">{(["startTime", "endTime"] as const).map((field) => <div key={field}><label htmlFor={`template-${index}-${slotIndex}-${field}`} className="mb-1 block text-xs text-gray-500">Service {slotIndex + 1} · {field === "startTime" ? "début" : "fin"}</label><input id={`template-${index}-${slotIndex}-${field}`} type="time" value={slot[field]} onChange={(e) => updateTemplateDay(index, { slots: day.slots.map((s, i) => i === slotIndex ? { ...s, [field]: e.target.value } : s) })} className="w-full bg-white" required /></div>)}</div>
                 {day.slots.length > 1 && <button type="button" aria-label={`Retirer le service ${slotIndex + 1} du ${label}`} onClick={() => updateTemplateDay(index, { slots: day.slots.filter((_, i) => i !== slotIndex) })} className="p-2.5 text-gray-400"><Trash2 className="h-4 w-4" /></button>}

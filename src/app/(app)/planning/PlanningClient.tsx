@@ -10,8 +10,8 @@ import { formatDayLabel, formatWeekRangeLabel, getWeekDays, getWeekStart, hoursB
 import { ShiftEditor, type PlanningEmployee as Employee, type PlanningShift as Shift, type ShiftTarget } from "./ShiftEditor";
 
 type Absence = { id: string; employeeId: string; startDate: string; endDate: string; type: string; status: string; note: string | null };
-const ABSENCE_LABELS: Record<string, string> = { CONGE_PAYE: "Congé payé", MALADIE: "Maladie", AUTRE: "Absence" };
-const ABSENCE_COLORS: Record<string, string> = { CONGE_PAYE: "bg-blue-50 text-blue-800", MALADIE: "bg-amber-50 text-amber-800", AUTRE: "bg-gray-100 text-gray-700" };
+const ABSENCE_LABELS: Record<string, string> = { REPOS: "Jour off", CONGE_PAYE: "Congé payé", MALADIE: "Maladie", AUTRE: "Absence" };
+const ABSENCE_COLORS: Record<string, string> = { REPOS: "bg-emerald-50 text-emerald-800", CONGE_PAYE: "bg-blue-50 text-blue-800", MALADIE: "bg-amber-50 text-amber-800", AUTRE: "bg-gray-100 text-gray-700" };
 const employeeColors = ["border-brand-200 bg-brand-50 text-brand-800", "border-blue-200 bg-blue-50 text-blue-800", "border-emerald-200 bg-emerald-50 text-emerald-800", "border-amber-200 bg-amber-50 text-amber-800"];
 const hoursLabel = (hours: number) => `${hours.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} h`;
 
@@ -83,14 +83,16 @@ export function PlanningClient({ isAdmin, employeeId }: { isAdmin: boolean; empl
 
   function slotContent(emp: Employee, date: string, large = false) {
     const absence = absenceFor(emp.id, date); const dayShifts = shiftsFor(emp.id, date);
+    const rest = emp.restDays?.includes((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7);
     return <div className="space-y-2">
+      {rest && !absence && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">Jour off habituel{dayShifts.length ? " · Horaires à vérifier" : ""}</p>}
       {absence && <p className={`rounded-xl px-3 py-2 text-xs font-medium ${ABSENCE_COLORS[absence.type] ?? ABSENCE_COLORS.AUTRE}`}>{isAdmin || emp.id === employeeId ? ABSENCE_LABELS[absence.type] ?? "Absence" : "Absent"}</p>}
       {dayShifts.map((shift) => {
         const content = <><span className={`block whitespace-nowrap font-semibold tabular-nums ${large ? "text-lg" : "text-xs"}`}>{shift.startTime}{large ? " – " : "–"}{shift.endTime}</span><span className="mt-1 block text-xs opacity-75">{hoursLabel(hoursBetween(shift.startTime, shift.endTime))}{absence ? " · À vérifier : absence" : ""}</span></>;
         return isAdmin ? <button key={shift.id} onClick={() => setShiftModal({ shift, employeeId: emp.id, date })} title={`Modifier les horaires de ${emp.name} le ${date}`} className={`w-full rounded-xl border px-2 py-2.5 text-left transition hover:shadow-sm ${colorFor(emp.id)}`}>{content}</button> : <div key={shift.id} className={`rounded-xl border px-3 py-3 ${colorFor(emp.id)}`}>{content}</div>;
       })}
-      {!absence && !dayShifts.length && <p className="py-2 text-sm text-gray-400">{isAdmin ? "Non planifié" : "Aucun horaire prévu"}</p>}
-      {isAdmin && !absence && <button aria-label={`Ajouter des horaires pour ${emp.name} le ${date}`} onClick={() => setShiftModal({ shift: null, employeeId: emp.id, date })} className="flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-gray-200 px-2 py-2 text-xs font-medium text-gray-500 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700"><Plus className="h-3.5 w-3.5" />Ajouter</button>}
+      {!absence && !rest && !dayShifts.length && <p className="py-2 text-sm text-gray-400">{isAdmin ? "Non planifié" : "Aucun horaire prévu"}</p>}
+      {isAdmin && !absence && !rest && <button aria-label={`Ajouter des horaires pour ${emp.name} le ${date}`} onClick={() => setShiftModal({ shift: null, employeeId: emp.id, date })} className="flex w-full items-center justify-center gap-1 rounded-xl border border-dashed border-gray-200 px-2 py-2 text-xs font-medium text-gray-500 hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700"><Plus className="h-3.5 w-3.5" />Ajouter</button>}
     </div>;
   }
 
@@ -113,9 +115,10 @@ export function PlanningClient({ isAdmin, employeeId }: { isAdmin: boolean; empl
         {view === "team" && <label className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3"><Search className="h-4 w-4 text-gray-400" /><input aria-label="Rechercher un employé ou un poste" placeholder="Rechercher un employé…" value={search} onChange={(e) => setSearch(e.target.value)} className="w-full max-w-[230px] border-0 bg-transparent focus:ring-0" /></label>}
       </div>
       {loading ? <div role="status" className="rounded-2xl border border-gray-200 bg-white p-8 text-sm text-gray-500">Chargement du planning…</div> : loadError ? null : !employees.length ? <div className="rounded-2xl bg-white p-8 text-sm text-gray-500">Aucun employé pour l’instant. {isAdmin && <Link href="/planning/employes" className="font-medium text-brand-700 underline">Ajouter l’équipe</Link>}</div> : <>
-        {view === "team" && <div className="hidden overflow-x-auto rounded-2xl border border-gray-200/70 bg-white shadow-sm md:block"><table className="min-w-[900px] table-fixed"><colgroup><col className="w-[140px]" />{weekDays.map((day) => <col key={toISODate(day)} />)}<col className="w-16" /></colgroup><thead><tr><th className="sticky left-0 z-20 min-w-[140px] bg-white py-4">Employé</th>{weekDays.map((day) => { const iso = toISODate(day); return <th key={iso} className={`min-w-[100px] border-l border-gray-100 text-center ${iso === todayISO ? "bg-brand-50 text-brand-700" : ""}`}><span className="block capitalize">{format(day, "EEE", { locale: fr })}</span><span className={`mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-base ${iso === todayISO ? "bg-brand-600 text-white" : "text-gray-900"}`}>{format(day, "d")}</span></th>; })}<th className="min-w-[64px] text-right">Total</th></tr></thead><tbody>{filteredEmployees.map((emp) => <tr key={emp.id}><td className="sticky left-0 z-10 bg-white py-5 align-top"><div className="flex items-center gap-2"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${colorFor(emp.id)}`}>{emp.name.slice(0, 1)}</span><div><span className="block text-sm font-semibold">{emp.name}</span><span className="text-xs text-gray-500">{emp.position}</span></div></div>{isAdmin && <Link href={`/planning/employes/${emp.id}`} className="mt-3 block text-xs text-brand-700 hover:underline">Horaires habituels ↗</Link>}</td>{weekDays.map((day) => { const iso = toISODate(day); return <td key={iso} className={`border-l border-gray-100 px-2 py-4 align-top ${iso === todayISO ? "bg-brand-50/30" : ""}`}>{slotContent(emp, iso)}</td>; })}<td className="whitespace-nowrap py-5 text-right align-top"><span className="text-sm font-semibold">{hoursLabel(weeklyHours(emp.id))}</span>{isAdmin && emp.hourlyRate !== null && <span className="mt-1 block text-xs text-gray-400">{(weeklyHours(emp.id) * emp.hourlyRate).toFixed(0)} €</span>}</td></tr>)}</tbody></table>{!filteredEmployees.length && <p className="p-6 text-sm text-gray-500">Aucun employé ne correspond à la recherche.</p>}</div>}
+        {view === "team" && <div className="hidden overflow-x-auto rounded-2xl border border-gray-200/70 bg-white shadow-sm md:block"><table className="min-w-[900px] table-fixed"><colgroup><col className="w-[140px]" />{weekDays.map((day) => <col key={toISODate(day)} />)}<col className="w-16" /></colgroup><thead><tr><th className="sticky left-0 z-20 min-w-[140px] bg-white py-4">Employé</th>{weekDays.map((day) => { const iso = toISODate(day); return <th key={iso} className={`min-w-[100px] border-l border-gray-100 text-center ${iso === todayISO ? "bg-brand-50 text-brand-700" : ""}`}><span className="block capitalize">{format(day, "EEE", { locale: fr })}</span><span className={`mt-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-base ${iso === todayISO ? "bg-brand-600 text-white" : "text-gray-900"}`}>{format(day, "d")}</span></th>; })}<th className="min-w-[64px] text-right">Total</th></tr></thead><tbody>{filteredEmployees.map((emp) => <tr key={emp.id}><td className="sticky left-0 z-10 bg-white py-5 align-top"><div className="flex items-center gap-2"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${colorFor(emp.id)}`}>{emp.name.slice(0, 1)}</span><div><span className="block text-sm font-semibold">{emp.name}</span><span className="text-xs text-gray-500">{emp.position}</span></div></div>{isAdmin && <Link href={`/planning/employes/${emp.id}`} className="mt-3 block text-xs text-brand-700 hover:underline">Modifier la fiche ↗</Link>}</td>{weekDays.map((day) => { const iso = toISODate(day); return <td key={iso} className={`border-l border-gray-100 px-2 py-4 align-top ${iso === todayISO ? "bg-brand-50/30" : ""}`}>{slotContent(emp, iso)}</td>; })}<td className="whitespace-nowrap py-5 text-right align-top"><span className="text-sm font-semibold">{hoursLabel(weeklyHours(emp.id))}</span>{isAdmin && emp.weeklyHours != null && <span className={`mt-1 block text-xs ${weeklyHours(emp.id) > emp.weeklyHours ? "text-amber-700" : "text-gray-400"}`}>/ {hoursLabel(emp.weeklyHours)} prévues</span>}{isAdmin && emp.hourlyRate !== null && <span className="mt-1 block text-xs text-gray-400">{(weeklyHours(emp.id) * emp.hourlyRate).toFixed(0)} €</span>}</td></tr>)}</tbody></table>{!filteredEmployees.length && <p className="p-6 text-sm text-gray-500">Aucun employé ne correspond à la recherche.</p>}</div>}
         <div className={view === "team" ? "md:hidden" : ""}>
           {view === "team" && <div className="mb-4"><label htmlFor="planning-person" className="mb-2 block text-sm font-medium">Planning de</label><select id="planning-person" value={displayedEmployee?.id ?? ""} onChange={(e) => setSelectedEmployee(e.target.value)} className="w-full bg-white">{filteredEmployees.map((emp) => <option key={emp.id} value={emp.id}>{emp.name} · {emp.position}</option>)}</select></div>}
+          {isAdmin && displayedEmployee && <Link href={`/planning/employes/${displayedEmployee.id}`} className="mb-4 block text-sm font-medium text-brand-700">Modifier la fiche de {displayedEmployee.name} ↗</Link>}
           {displayedEmployee ? <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{weekDays.map((day) => { const iso = toISODate(day); const dayHours = shiftsFor(displayedEmployee.id, iso).reduce((sum, s) => sum + hoursBetween(s.startTime, s.endTime), 0); return <article key={iso} className={`rounded-2xl border bg-white p-5 shadow-sm ${iso === todayISO ? "border-brand-300 ring-1 ring-brand-100" : "border-gray-200/70"}`}><div className="mb-4 flex items-center justify-between gap-2"><h2 className="text-sm font-semibold capitalize">{formatDayLabel(day)}</h2>{iso === todayISO ? <span className="rounded-full bg-brand-50 px-2 py-1 text-[10px] font-semibold text-brand-700">Aujourd’hui</span> : dayHours > 0 ? <span className="text-xs text-gray-500">{hoursLabel(dayHours)}</span> : null}</div>{slotContent(displayedEmployee, iso, true)}</article>; })}</div> : <p className="rounded-2xl bg-white p-6 text-sm text-gray-500">{view === "mine" ? "Votre compte n’est pas rattaché à un employé de ce restaurant. Contactez votre gérant." : "Aucun employé ne correspond à la recherche."}</p>}
         </div>
       </>}
@@ -207,13 +210,13 @@ function AbsencesSection({
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-gray-900">{isAdmin ? "Congés & absences à venir" : "Mes demandes de congés"}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">{isAdmin ? "Repos, congés & absences à venir" : "Mes demandes de congés"}</h2>
         <button
           onClick={() => { setError(null); setShowForm(true); }}
           disabled={!isAdmin && !employeeId}
           className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
-          {isAdmin ? "+ Déclarer une absence" : "+ Demander un congé"}
+          {isAdmin ? "+ Ajouter un repos / une absence" : "+ Demander un congé"}
         </button>
       </div>
 
@@ -267,6 +270,7 @@ function AbsencesSection({
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Type</label>
               <select value={type} onChange={(e) => setType(e.target.value)} className="w-full">
+                <option value="REPOS">Jour off / repos</option>
                 <option value="CONGE_PAYE">Congé payé</option>
                 <option value="MALADIE">Maladie</option>
                 <option value="AUTRE">Autre</option>

@@ -1,0 +1,2 @@
+ALTER TABLE "Employee" ADD COLUMN "restDays" TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE "Employee" ADD COLUMN "weeklyHours" REAL;

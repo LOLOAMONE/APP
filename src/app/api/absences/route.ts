@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { planningDateSchema } from "@/lib/shiftValidation";
 import { prisma } from "@/lib/db";
 import { requireActiveRestaurant } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
-const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
 
 const absenceSchema = z.object({
   employeeId: z.string().min(1),
-  startDate: z.string().regex(dateRegex),
-  endDate: z.string().regex(dateRegex),
-  type: z.enum(["CONGE_PAYE", "MALADIE", "AUTRE"]),
+  startDate: planningDateSchema,
+  endDate: planningDateSchema,
+  type: z.enum(["CONGE_PAYE", "MALADIE", "REPOS", "AUTRE"]),
   note: z.string().optional().nullable(),
 });
 

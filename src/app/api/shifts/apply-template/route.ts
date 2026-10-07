@@ -16,12 +16,14 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   const weekEnd = toISODate(addDays(monday, 6));
   return prisma.$transaction(async (tx) => {
     const scope = { employee: { restaurantId: session.activeRestaurantId } };
+    const people = await tx.employee.findMany({ where: { restaurantId: session.activeRestaurantId }, select: { id: true, restDays: true } });
+    const rests = new Map(people.map((p) => [p.id, JSON.parse(p.restDays) as number[]]));
     const entries = await tx.scheduleTemplateEntry.findMany({ where: scope });
     const existingShifts = await tx.shift.findMany({ where: { ...scope, date: { gte: weekStart, lte: weekEnd } }, select: { employeeId: true, date: true } });
     const absences = await tx.absence.findMany({ where: { ...scope, status: "APPROVED", startDate: { lte: weekEnd }, endDate: { gte: weekStart } } });
     const existingKeys = new Set(existingShifts.map((s) => `${s.employeeId}_${s.date}`));
     let skippedAbsences = 0;
-    const toCreate = entries.map((entry) => ({ employeeId: entry.employeeId, date: toISODate(addDays(monday, entry.dayOfWeek)), startTime: entry.startTime, endTime: entry.endTime })).filter((shift) => {
+    const toCreate = entries.filter((entry) => !rests.get(entry.employeeId)?.includes(entry.dayOfWeek)).map((entry) => ({ employeeId: entry.employeeId, date: toISODate(addDays(monday, entry.dayOfWeek)), startTime: entry.startTime, endTime: entry.endTime })).filter((shift) => {
       if (absences.some((a) => a.employeeId === shift.employeeId && a.startDate <= shift.date && a.endDate >= shift.date)) { skippedAbsences++; return false; }
       return !existingKeys.has(`${shift.employeeId}_${shift.date}`);
     });

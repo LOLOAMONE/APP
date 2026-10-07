@@ -31,9 +31,13 @@ export function slotsOverlap(a: { startTime: string; endTime: string }, b: { sta
   return a.startTime < b.endTime && b.startTime < a.endTime;
 }
 
+export const restDaysSchema = z.array(z.number().int().min(0).max(6)).max(7).transform((days) => [...new Set(days)].sort());
+
 export const weeklyTemplateSchema = z.object({
+  restDays: restDaysSchema.default([]),
   entries: z.array(z.object({ dayOfWeek: z.number().int().min(0).max(6), startTime: z.string(), endTime: z.string() })).max(21),
-}).superRefine(({ entries }, ctx) => {
+}).superRefine(({ entries, restDays }, ctx) => {
+  if (entries.some((entry) => restDays.includes(entry.dayOfWeek))) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Un jour de repos ne peut pas contenir de service." });
   for (const entry of entries) {
     const result = shiftSlotSchema.safeParse(entry);
     if (!result.success) for (const issue of result.error.issues) ctx.addIssue(issue);

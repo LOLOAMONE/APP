@@ -25,6 +25,9 @@ const emptyForm = {
 };
 
 export function UsersTab({ currentUserId }: { currentUserId: string }) {
+  const [editing, setEditing] = useState<UserRow | null>(null);
+  const [account, setAccount] = useState({ username: "", name: "", password: "" });
+  const [accountError, setAccountError] = useState<string | null>(null);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +114,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
 
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-500">
           La direction a toujours accès à tout. Pour un employé, coche les pages supplémentaires auxquelles il peut
           accéder en plus du Planning.
@@ -126,85 +129,28 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
 
       {error && <p className="mb-3 text-sm text-brand-600">{error}</p>}
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table>
-          <thead>
-            <tr>
-              <th>Utilisateur</th>
-              <th>Rôle</th>
-              <th>Marges</th>
-              <th>Mercuriale</th>
-              <th>Clients</th>
-              <th>Marketing</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td>
-                  <div className="font-medium">{u.username}</div>
-                  {u.employee && <div className="text-xs text-gray-400">{u.employee.name} — {u.employee.position}</div>}
-                </td>
-                <td>
-                  <select
-                    value={u.role}
-                    onChange={(e) => updateUser(u, { role: e.target.value as "ADMIN" | "EMPLOYEE" })}
-                    disabled={savingId === u.id || u.id === currentUserId}
-                    className="text-sm"
-                  >
-                    <option value="ADMIN">Direction</option>
-                    <option value="EMPLOYEE">Employé</option>
-                  </select>
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={u.role === "ADMIN" ? true : u.canAccessMarges}
-                    disabled={u.role === "ADMIN" || savingId === u.id}
-                    onChange={(e) => updateUser(u, { canAccessMarges: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={u.role === "ADMIN" ? true : u.canAccessMercuriale}
-                    disabled={u.role === "ADMIN" || savingId === u.id}
-                    onChange={(e) => updateUser(u, { canAccessMercuriale: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={u.role === "ADMIN" ? true : u.canAccessCrm}
-                    disabled={u.role === "ADMIN" || savingId === u.id}
-                    onChange={(e) => updateUser(u, { canAccessCrm: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                </td>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={u.role === "ADMIN" ? true : u.canAccessMarketing}
-                    disabled={u.role === "ADMIN" || savingId === u.id}
-                    onChange={(e) => updateUser(u, { canAccessMarketing: e.target.checked })}
-                    className="h-4 w-4"
-                  />
-                </td>
-              </tr>
-            ))}
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={6} className="py-6 text-center text-gray-400">
-                  Aucun utilisateur
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {editing && <form className="mb-4 space-y-3 rounded-xl border border-brand-200 bg-brand-50/30 p-4" onSubmit={async (e) => {
+        e.preventDefault(); setSaving(true); setAccountError(null);
+        try { const res = await fetch(`/api/users/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: account.username, ...(editing.employee ? { name: account.name } : {}), ...(account.password ? { password: account.password } : {}) }) });
+          const data = await res.json(); if (!res.ok) { setAccountError(data.error || 'Enregistrement impossible.'); return; } setEditing(null); setAccount({ username: '', name: '', password: '' }); await load();
+        } catch { setAccountError('Connexion impossible. Réessayez.'); } finally { setSaving(false); }
+      }}>
+        <h3 className="font-semibold">Modifier {editing.username}</h3>
+        {editing.employee && <label className="block text-sm">Nom de l’employé<input aria-label="Nom de l’employé" required value={account.name} onChange={(e) => setAccount({ ...account, name: e.target.value })} className="mt-1 w-full" /></label>}
+        <label className="block text-sm">Identifiant<input aria-label="Identifiant du compte" required minLength={3} disabled={editing.id === currentUserId} value={account.username} onChange={(e) => setAccount({ ...account, username: e.target.value })} className="mt-1 w-full" /></label>
+        {editing.id === currentUserId ? <p className="text-xs text-gray-500">Votre identifiant et votre mot de passe se modifient dans Mon profil.</p> : <label className="block text-sm">Nouveau mot de passe<input aria-label="Nouveau mot de passe du compte" type="password" autoComplete="new-password" minLength={6} value={account.password} onChange={(e) => setAccount({ ...account, password: e.target.value })} className="mt-1 w-full" /><span className="text-xs text-gray-500">Laisser vide pour conserver le mot de passe actuel.</span></label>}
+        {editing.employee && <a href={`/planning/employes/${editing.employee.id}`} className="block text-sm text-brand-700 underline">Poste, taux horaire et jours off ↗</a>}
+        {accountError && <p role="alert" className="text-sm text-brand-700">{accountError}</p>}
+        <div className="flex justify-end gap-3"><button type="button" disabled={saving} onClick={() => setEditing(null)}>Annuler</button><button disabled={saving} className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-semibold text-white">{saving ? 'Enregistrement…' : 'Enregistrer'}</button></div>
+      </form>}
 
+      <div className="space-y-3">
+        {users.map((u) => <article key={u.id} className="rounded-xl border border-gray-200 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><p className="break-words font-semibold">{u.employee?.name ?? u.username}</p><p className="break-words text-xs text-gray-500">{u.username}{u.employee ? ` · ${u.employee.position}` : ""}</p></div><button disabled={savingId !== null} onClick={() => { setEditing(u); setAccount({ username: u.username, name: u.employee?.name ?? "", password: "" }); setAccountError(null); }} className="rounded-lg border border-brand-200 px-3 py-2 text-sm font-medium text-brand-700">Modifier</button></div>
+          <label className="mt-3 block text-xs text-gray-500">Rôle<select aria-label={`Rôle de ${u.username}`} value={u.role} onChange={(e) => updateUser(u, { role: e.target.value as "ADMIN" | "EMPLOYEE" })} disabled={savingId !== null || u.id === currentUserId} className="mt-1 w-full"><option value="ADMIN">Direction</option><option value="EMPLOYEE">Employé</option></select></label>
+          <div className="mt-3 grid grid-cols-2 gap-3">{([['canAccessMarges', 'Marges'], ['canAccessMercuriale', 'Mercuriale'], ['canAccessCrm', 'Clients'], ['canAccessMarketing', 'Marketing']] as const).map(([key, label]) => <label key={key} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={u.role === 'ADMIN' || u[key]} disabled={u.role === 'ADMIN' || savingId !== null} onChange={(e) => updateUser(u, { [key]: e.target.checked })} />{label}</label>)}</div>
+        </article>)}
+      </div>
       {showForm && (
         <Modal title="Nouvel utilisateur" onClose={() => setShowForm(false)}>
           <form onSubmit={handleCreate} className="space-y-4">
@@ -241,7 +187,7 @@ export function UsersTab({ currentUserId }: { currentUserId: string }) {
             </div>
 
             {form.role === "EMPLOYEE" && (
-              <div className="flex gap-4 border-t border-gray-100 pt-3">
+              <div className="flex flex-wrap gap-4 border-t border-gray-100 pt-3">
                 <label className="flex items-center gap-2 text-sm text-gray-700">
                   <input
                     type="checkbox"

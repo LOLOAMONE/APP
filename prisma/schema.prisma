@@ -115,6 +115,8 @@ model Employee {
   name             String
   position         String
   hourlyRate       Float?
+  restDays         String                  @default("[]") // jours de repos récurrents, 0=lundi
+  weeklyHours      Float? // durée hebdomadaire de référence
   userId           String?                 @unique
   user             User?                   @relation(fields: [userId], references: [id], onDelete: SetNull)
   shifts           Shift[]

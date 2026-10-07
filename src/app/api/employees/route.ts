@@ -23,12 +23,14 @@ export const GET = withErrorHandling(async () => {
       name: true,
       position: true,
       hourlyRate: true,
+      restDays: true,
+      weeklyHours: true,
       userId: true,
       scheduleTemplate: { select: { dayOfWeek: true } },
     },
   });
   return NextResponse.json(
-    employees.map(({ scheduleTemplate, ...e }) => ({ ...e, ...(!session.isSuperAdmin && session.activeRole !== "ADMIN" ? { hourlyRate: null } : {}), templateDaysCount: new Set(scheduleTemplate.map((entry) => entry.dayOfWeek)).size }))
+    employees.map(({ scheduleTemplate, ...e }) => ({ ...e, restDays: JSON.parse(e.restDays) as number[], ...(!session.isSuperAdmin && session.activeRole !== "ADMIN" ? { hourlyRate: null } : {}), templateDaysCount: new Set(scheduleTemplate.map((entry) => entry.dayOfWeek)).size }))
   );
 });
 

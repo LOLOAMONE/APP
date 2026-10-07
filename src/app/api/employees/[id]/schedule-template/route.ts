@@ -29,6 +29,7 @@ export const PUT = withErrorHandling(
     const data = weeklyTemplateSchema.parse(await req.json());
 
     await prisma.$transaction([
+      prisma.employee.update({ where: { id: params.id }, data: { restDays: JSON.stringify(data.restDays) } }),
       prisma.scheduleTemplateEntry.deleteMany({ where: { employeeId: params.id } }),
       prisma.scheduleTemplateEntry.createMany({
         data: data.entries.map((e) => ({ ...e, employeeId: params.id })),

@@ -136,3 +136,9 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 - **Application desktop** (Mac/Windows) via Tauri — coquille native pointant vers le site en ligne, pas de store requis.
 - **Intégrations externes** (caisse, Shine pour la facturation, avis clients, réservations) — à cadrer dans un cahier des charges dédié, en conservant les logiciels existants plutôt qu'en les recréant.
 - **Espace de stockage de documents interne** (façon Drive) — évoqué mais non spécifié.
+
+### Employés et jours off (7 octobre 2026)
+- Bouton Modifier explicite dans la liste des employés et accès à la fiche depuis le planning, y compris sur mobile. Nom, poste, taux horaire, identifiant et nouveau mot de passe sont modifiables ; l’identifiant actuel est affiché.
+- Employee.restDays stocke les repos hebdomadaires (0=lundi), enregistrés avec les horaires habituels. Un repos exclut les services de base et le remplissage automatique ; les écritures de créneaux le contrôlent. Les horaires déjà existants sont conservés et signalés. Employee.weeklyHours sert de référence affichée dans le total hebdomadaire.
+- Absence accepte REPOS pour les jours off ponctuels ; déclaration direction validée immédiatement, demandes employé soumises à validation. Dates civiles vérifiées.
+- Réglages > Utilisateurs : cartes adaptées au mobile, édition nom lié, identifiant et nouveau mot de passe via PATCH /api/users/[id]. Les modifications nom/accès sont transactionnelles. Un admin local ne peut pas modifier les accès d’un compte global ou partagé avec un autre restaurant ; le compte courant passe par Mon profil.

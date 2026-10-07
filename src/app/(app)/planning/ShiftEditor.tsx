@@ -5,7 +5,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/Modal";
 import { formatDayLabel, hoursBetween, toISODate } from "@/lib/dates";
 
-export type PlanningEmployee = { id: string; name: string; position: string; hourlyRate: number | null };
+export type PlanningEmployee = { id: string; name: string; position: string; hourlyRate: number | null; restDays: number[]; weeklyHours: number | null };
 export type PlanningShift = { id: string; employeeId: string; date: string; startTime: string; endTime: string };
 export type ShiftTarget = { shift: PlanningShift | null; employeeId: string; date: string };
 

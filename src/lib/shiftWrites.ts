@@ -7,6 +7,9 @@ type Candidate = { employeeId: string; date: string; startTime: string; endTime:
 export async function checkShiftConflicts(tx: Prisma.TransactionClient, candidates: Candidate[], excludeId?: string) {
   const employeeId = candidates[0].employeeId;
   const dates = [...new Set(candidates.map((s) => s.date))].sort();
+  const employee = await tx.employee.findUnique({ where: { id: employeeId }, select: { restDays: true } });
+  const restDays: number[] = JSON.parse(employee?.restDays ?? "[]");
+  if (dates.some((date) => restDays.includes((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7))) return "Ce jour est un repos habituel. Modifiez la fiche employé pour y ajouter des horaires.";
   const absence = await tx.absence.findFirst({
     where: { employeeId, status: "APPROVED", OR: dates.map((date) => ({ startDate: { lte: date }, endDate: { gte: date } })) },
   });
