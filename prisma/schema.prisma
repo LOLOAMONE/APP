@@ -312,6 +312,24 @@ model CrmContact {
   companyId     String?
   company       CrmCompany?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
   name          String
+  firstName            String?
+  lastName             String?
+  companyName          String?
+  addressLine1         String?
+  addressLine2         String?
+  postalCode           String?
+  city                 String?
+  country              String?
+  preferredChannel     String?
+  tags                 String?
+  lastContactDate      String?
+  nextContactDate      String?
+  birthdayDay          Int?
+  birthdayMonth        Int?
+  consentEmail         Boolean @default(false)
+  consentWhatsapp      Boolean @default(false)
+  consentPost          Boolean @default(false)
+
   role          String? // fonction dans l'entreprise
   phone         String?
   email         String?

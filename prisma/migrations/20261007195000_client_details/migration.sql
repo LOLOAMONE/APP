@@ -1,0 +1,17 @@
+ALTER TABLE "CrmContact" ADD COLUMN "firstName" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "lastName" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "companyName" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "addressLine1" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "addressLine2" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "postalCode" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "city" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "country" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "preferredChannel" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "tags" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "lastContactDate" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "nextContactDate" TEXT;
+ALTER TABLE "CrmContact" ADD COLUMN "birthdayDay" INTEGER;
+ALTER TABLE "CrmContact" ADD COLUMN "birthdayMonth" INTEGER;
+ALTER TABLE "CrmContact" ADD COLUMN "consentEmail" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "CrmContact" ADD COLUMN "consentWhatsapp" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "CrmContact" ADD COLUMN "consentPost" BOOLEAN NOT NULL DEFAULT false;

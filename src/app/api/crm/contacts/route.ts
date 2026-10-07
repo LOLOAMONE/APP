@@ -1,17 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
+import { contactSchema } from "@/lib/contactValidation";
 import { prisma } from "@/lib/db";
 import { requireCrmAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
-
-const contactSchema = z.object({
-  companyId: z.string().optional().nullable(),
-  name: z.string().min(1),
-  role: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  email: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-});
 
 export const GET = withErrorHandling(async () => {
   const session = await requireCrmAccess();
@@ -26,6 +17,7 @@ export const GET = withErrorHandling(async () => {
 export const POST = withErrorHandling(async (req: NextRequest) => {
   const session = await requireCrmAccess();
   const data = contactSchema.parse(await req.json());
+  if (data.companyId && !await prisma.crmCompany.findFirst({ where: { id: data.companyId, restaurantId: session.activeRestaurantId } })) return NextResponse.json({ error: "Entreprise introuvable" }, { status: 404 });
   const contact = await prisma.crmContact.create({
     data: { ...data, restaurantId: session.activeRestaurantId },
     include: { company: true },
