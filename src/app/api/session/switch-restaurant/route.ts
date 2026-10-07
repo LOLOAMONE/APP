@@ -5,8 +5,7 @@ import { createSessionToken, COOKIE_NAME, SESSION_DURATION_SECONDS } from "@/lib
 import { withErrorHandling } from "@/lib/api";
 
 const switchSchema = z.object({
-  // null = quitter vers la vue réseau (réservé aux SUPER_ADMIN).
-  restaurantId: z.string().min(1).nullable(),
+  restaurantId: z.string().min(1),
 });
 
 /** Change le restaurant actif de la session sans reconnexion (sélecteur / bascule vue gérant). */
@@ -14,11 +13,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   const session = await requireUser();
   const { restaurantId } = switchSchema.parse(await req.json());
 
-  if (restaurantId === null) {
-    if (!session.isSuperAdmin) {
-      return NextResponse.json({ error: "Accès interdit" }, { status: 403 });
-    }
-  } else if (!session.restaurants.some((r) => r.id === restaurantId)) {
+  if (!session.restaurants.some((r) => r.id === restaurantId)) {
     return NextResponse.json({ error: "Restaurant inaccessible" }, { status: 403 });
   }
 

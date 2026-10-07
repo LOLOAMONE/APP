@@ -12,8 +12,6 @@ import {
   Hash,
   LifeBuoy,
   Megaphone,
-  Store,
-  UserCog,
   Settings,
   LogOut,
   Menu,
@@ -28,7 +26,6 @@ type RestaurantSummary = { id: string; name: string; role: "ADMIN" | "EMPLOYEE" 
 type SidebarProps = {
   userId: string;
   isAdmin: boolean;
-  isSuperAdmin: boolean;
   activeRestaurantId: string | null;
   restaurants: RestaurantSummary[];
   username: string;
@@ -36,14 +33,11 @@ type SidebarProps = {
   canAccessMercuriale: boolean;
   canAccessCrm: boolean;
   canAccessMarketing: boolean;
-  hasGlobalTicketAccess: boolean;
-  hasGlobalMarketingAccess: boolean;
 };
 
 export function Sidebar({
   userId,
   isAdmin,
-  isSuperAdmin,
   activeRestaurantId,
   restaurants,
   username,
@@ -51,15 +45,12 @@ export function Sidebar({
   canAccessMercuriale,
   canAccessCrm,
   canAccessMarketing,
-  hasGlobalTicketAccess,
-  hasGlobalMarketingAccess,
 }: SidebarProps) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [switching, setSwitching] = useState(false);
 
-  const networkView = isSuperAdmin && !activeRestaurantId;
 
   const TABS = [
     { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, visible: true },
@@ -73,21 +64,13 @@ export function Sidebar({
   ];
   const visibleTabs = TABS.filter((tab) => tab.visible);
 
-  const NETWORK_TABS = [
-    { href: "/reseau", label: "Restaurants", icon: Store, visible: true },
-    { href: "/reseau/utilisateurs", label: "Utilisateurs", icon: UserCog, visible: true },
-    { href: "/tickets", label: "Tickets", icon: LifeBuoy, visible: hasGlobalTicketAccess },
-    { href: "/marketing", label: "Marketing", icon: Megaphone, visible: hasGlobalMarketingAccess },
-  ];
-  const visibleNetworkTabs = NETWORK_TABS.filter((tab) => tab.visible);
-
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   }
 
-  async function switchRestaurant(restaurantId: string | null) {
+  async function switchRestaurant(restaurantId: string) {
     setSwitching(true);
     try {
       await fetch("/api/session/switch-restaurant", {
@@ -95,7 +78,7 @@ export function Sidebar({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ restaurantId }),
       });
-      router.push(restaurantId ? "/marges" : "/reseau");
+      router.push("/dashboard");
       router.refresh();
     } finally {
       setSwitching(false);
@@ -108,14 +91,13 @@ export function Sidebar({
         <div className="flex items-center gap-3 px-5 pb-6 pt-7">
           <UtensilsCrossed className="h-10 w-10 shrink-0 rounded-2xl bg-white/10 p-2.5 text-white" aria-hidden />
           <span className="truncate text-xl font-semibold tracking-tight text-white">
-            {networkView ? "Amoné · Réseau" : "Amoné"}
+            Amoné
           </span>
         </div>
 
-        {(restaurants.length > 1 || isSuperAdmin) && (
+        {restaurants.length > 1 && (
           <div className="px-4 pb-4">
             <RestaurantSwitcher
-              isSuperAdmin={isSuperAdmin}
               activeRestaurantId={activeRestaurantId}
               restaurants={restaurants}
               switching={switching}
@@ -128,35 +110,13 @@ export function Sidebar({
         )}
 
         <nav aria-label="Navigation principale" className="flex-1 space-y-1.5 overflow-y-auto px-3">
-          <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">{networkView ? "Gestion du réseau" : "Votre espace"}</p>
-          {(networkView ? visibleNetworkTabs : visibleTabs).map((tab) => (
+          <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Votre espace</p>
+          {visibleTabs.map((tab) => (
             <SidebarNavItem key={tab.href} href={tab.href} label={tab.label} icon={tab.icon} onClick={onNavigate} />
           ))}
         </nav>
 
         <div className="mt-auto space-y-2 border-t border-white/10 px-3 py-5">
-          {isSuperAdmin && !networkView && (
-            <button
-              onClick={() => {
-                switchRestaurant(null);
-                onNavigate?.();
-              }}
-              className="w-full rounded-bento-sm bg-brand-50 px-3 py-2 text-left text-xs font-medium text-brand-700 hover:shadow-bento"
-            >
-              Mode gérant — Quitter
-            </button>
-          )}
-          {networkView && restaurants.length > 0 && (
-            <button
-              onClick={() => {
-                switchRestaurant(restaurants[0].id);
-                onNavigate?.();
-              }}
-              className="w-full rounded-bento-sm bg-brand-50 px-3 py-2 text-left text-xs font-medium text-brand-700 hover:shadow-bento"
-            >
-              Entrer en mode gérant
-            </button>
-          )}
           <div className="flex items-center justify-between gap-2 px-1 pt-1">
             <div className="flex min-w-0 items-center gap-2.5"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">{username.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><span className="block truncate text-sm font-medium text-white">{username}</span><span className="text-xs text-white/45">Mon compte</span></div></div>
             <div className="flex shrink-0 items-center gap-1">
@@ -192,7 +152,7 @@ export function Sidebar({
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 lg:hidden">
         <span className="flex items-center gap-2 text-lg font-bold text-brand-700">
           <UtensilsCrossed className="h-5 w-5" aria-hidden />
-          {networkView ? "Amoné · Réseau" : "Amoné"}
+          Amoné
         </span>
         <button
           onClick={() => setMobileOpen(true)}

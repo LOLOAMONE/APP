@@ -13,7 +13,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <Sidebar
         userId={user.sub}
         isAdmin={user.isSuperAdmin || user.activeRole === "ADMIN"}
-        isSuperAdmin={user.isSuperAdmin}
         activeRestaurantId={user.activeRestaurantId}
         restaurants={user.restaurants}
         username={user.username}
@@ -21,8 +20,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canAccessMercuriale={user.activeCanAccessMercuriale}
         canAccessCrm={user.activeCanAccessCrm}
         canAccessMarketing={user.activeCanAccessMarketing}
-        hasGlobalTicketAccess={user.isSuperAdmin || user.globalModules.includes("ticketing")}
-        hasGlobalMarketingAccess={user.isSuperAdmin || user.globalModules.includes("marketing")}
       />
       <main className="app-content min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-10 lg:py-10">{children}</main>
     </div>

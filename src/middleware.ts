@@ -31,6 +31,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
+  if (pathname === "/reseau" || pathname.startsWith("/reseau/")) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   const deny = () =>
     isApi
       ? NextResponse.json({ error: "Accès interdit" }, { status: 403 })

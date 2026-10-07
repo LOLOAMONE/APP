@@ -8,7 +8,7 @@ export default async function CampagnesPage() {
     redirect("/login");
   }
 
-  const hasGlobalAccess = user.isSuperAdmin || user.globalModules.includes("marketing");
+  const hasGlobalAccess = false;
 
   if (!hasGlobalAccess && !user.activeRestaurantId) {
     return (

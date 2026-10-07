@@ -1,6 +1,6 @@
 # Amoné Nice — Documentation du projet
 
-État du code au 2026-10-04. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
+État du code au 2026-10-07. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
 
 ## Stack technique
 
@@ -18,7 +18,7 @@ L'application gère désormais plusieurs restaurants (marque Amoné avec maison 
 2. **`UserRestaurant(userId, restaurantId, role)`** — rattachement d'un utilisateur à un restaurant avec un rôle **local** (`ADMIN` ou `EMPLOYEE`). Un même utilisateur peut avoir des lignes différentes (donc des rôles différents) sur plusieurs restaurants. Un `ADMIN` local a accès à tous les modules de son restaurant sans permission dédiée.
 3. **`ModulePermission(userId, module, restaurantId)`** — accès à un module précis (`"marges"` | `"mercuriale"` | `"crm"`, et futurs modules transverses comme `"marketing"`/`"ticketing"`), soit sur un restaurant précis, soit à portée **globale** (`restaurantId = null`) pour des comptes transverses réseau. Mécanisme générique et extensible : ajouter un futur module ne demande aucune migration de schéma, juste une nouvelle valeur de `module`.
 
-**Session** : le JWT de session porte un `activeRestaurantId` (le restaurant actuellement affiché/édité), auto-sélectionné s'il n'y en a qu'un seul accessible. `POST /api/session/switch-restaurant` change ce contexte sans reconnexion. Ordre de vérification dans le middleware et dans chaque route API : `isSuperAdmin` → `ModulePermission` (locale ou globale) → rôle/permission local sur `activeRestaurantId`.
+**Session** : le JWT de session porte un `activeRestaurantId` (le restaurant actuellement affiché/édité), auto-sélectionné parmi les restaurants accessibles si aucun choix valide n'est fourni. `POST /api/session/switch-restaurant` change ce contexte sans reconnexion. Ordre de vérification dans le middleware et dans chaque route API : `isSuperAdmin` → `ModulePermission` (locale ou globale) → rôle/permission local sur `activeRestaurantId`.
 
 **Données métier** : toutes les tables listées/créées indépendamment (Ingredient, Product, Menu, Supplier, Employee, CrmCompany, CrmContact, CrmOpportunity, MeasureUnit, PackagingUnit) portent un `restaurantId` obligatoire. Les tables enfants/jonction (IngredientPriceHistory, ProductIngredient, MenuItem, SupplierItem, Shift, Absence, ScheduleTemplateEntry) héritent du scope via leur parent.
 
@@ -26,7 +26,9 @@ Migration des données existantes (SQLite mono-restaurant → multi-tenant) fait
 
 Gestion des comptes d'un restaurant dans Réglages → Utilisateurs (scopée au restaurant actif).
 
-**Vue réseau** (`/reseau`, SUPER_ADMIN uniquement) : sélecteur de restaurant dans la nav (visible dès qu'un compte a accès à plusieurs restaurants), bascule "Vue réseau" ⇄ "Mode gérant" sans reconnexion, `/reseau` liste tous les restaurants avec création d'un nouveau (pré-rempli avec une liste de base d'unités/conditionnements, modifiable ensuite sans impact sur les autres restaurants), `/reseau/utilisateurs` gère tous les comptes du réseau (statut super admin, rattachements à plusieurs restaurants avec rôle par restaurant, modules à portée globale). **Pas encore construit** : dashboard consolidé (chiffres agrégés tous restaurants).
+**Usage restaurant uniquement (7 octobre 2026)** : la vue groupe a été retirée. Les anciennes URL `/reseau` et `/reseau/utilisateurs` redirigent vers `/dashboard` ; leurs interfaces ont été supprimées. La navigation affiche uniquement les modules restaurant, sans bascule « Mode gérant » ni entrée « Vue réseau ». Le sélecteur ne s'affiche que si plusieurs restaurants sont accessibles et propose uniquement des restaurants. À la connexion, le premier restaurant accessible est sélectionné si aucun choix valide n'est fourni ; les anciennes sessions sans restaurant actif sont résolues côté serveur. `POST /api/session/switch-restaurant` exige désormais un identifiant non nul.
+
+La structure multi-restaurants, les rôles et les données existantes restent conservés en base pour éviter une migration destructive. Les routes techniques d'administration réseau restent présentes, mais n'ont plus d'écran de gestion. Les tickets et le marketing utilisent désormais une portée limitée au restaurant actif, y compris pour le super administrateur. Les anciennes campagnes/publications nationales restent consultables selon leur ciblage ; la création de nouvelles ressources nationales n'est plus proposée ni autorisée par le contrôle d'accès marketing.
 
 ## Navigation et design system
 
@@ -81,10 +83,10 @@ CRM léger pour les clients **entreprises et événements** (séminaires, privat
 
 Premier module transverse construit sur l'architecture multi-restaurants (réutilise `ModulePermission`, pas de système de permissions parallèle) :
 
-- **Tickets** — demandes d'un restaurant vers la maison mère, remplaçant l'email. Chaque `Ticket` (sujet, description initiale, statut `OPEN`/`IN_PROGRESS`/`RESOLVED`/`CLOSED`, catégorie libre, restaurant d'origine, auteur) a son fil de discussion (`TicketMessage`, horodaté). Créable par **tout membre** du restaurant actif (pas de permission dédiée) ; le statut ne peut être changé que par la maison mère (`isSuperAdmin` ou `ModulePermission(module: "ticketing", restaurantId: null)` — rôle transverse, ex. équipe support sans être SUPER_ADMIN). La vue `/tickets` s'adapte automatiquement à la portée de l'utilisateur : agrégée tous restaurants (avec filtres statut/restaurant) pour la portée globale, limitée au restaurant actif sinon — un seul endpoint (`GET /api/tickets`), pas deux vues séparées.
+- **Tickets** — demandes d'un restaurant vers la maison mère, remplaçant l'email. Chaque `Ticket` (sujet, description initiale, statut `OPEN`/`IN_PROGRESS`/`RESOLVED`/`CLOSED`, catégorie libre, restaurant d'origine, auteur) a son fil de discussion (`TicketMessage`, horodaté). Créable par **tout membre** du restaurant actif (pas de permission dédiée) ; le statut ne peut être changé que par la maison mère (`isSuperAdmin` ou `ModulePermission(module: "ticketing", restaurantId: null)` — rôle transverse, ex. équipe support sans être SUPER_ADMIN). La vue `/tickets` s'adapte automatiquement à la portée de l'utilisateur : limitée au restaurant actif pour tous les comptes — un seul endpoint (`GET /api/tickets`), pas deux vues séparées.
 - **Canaux** — communication interne façon Slack, **indépendante** des tickets, scopée au restaurant actif uniquement (pas d'agrégation réseau). Chaque restaurant reçoit un canal "Général" par défaut à sa création (`POST /api/restaurants`) ; tout membre peut créer d'autres canaux par sujet. `Channel`/`ChannelMessage`, ouverts à tout membre du restaurant.
 - Rafraîchissement des fils par polling simple (`usePolling`, ~6-15s selon le contexte, en pause quand l'onglet n'est pas visible) — pas de WebSocket/SSE pour cette première itération.
-- Nav : "Tickets" et "Canaux" visibles à tout membre en vue restaurant ; "Tickets" apparaît aussi en vue réseau pour les comptes à portée globale (SUPER_ADMIN ou rôle transverse "ticketing").
+- Nav : "Tickets" et "Canaux" visibles à tout membre en vue restaurant ; la vue réseau est retirée.
 
 ### Marketing (`/marketing`)
 

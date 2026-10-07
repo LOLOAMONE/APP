@@ -10,7 +10,7 @@ export default async function TicketsPage() {
 
   return (
     <TicketsClient
-      hasGlobalAccess={user.isSuperAdmin || user.globalModules.includes("ticketing")}
+      hasGlobalAccess={false}
       restaurants={user.restaurants}
       canCreate={!!user.activeRestaurantId}
     />

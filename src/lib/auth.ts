@@ -15,7 +15,10 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 export async function getCurrentUser(): Promise<SessionPayload | null> {
   const token = cookies().get(COOKIE_NAME)?.value;
   if (!token) return null;
-  return verifySessionToken(token);
+  const session = await verifySessionToken(token);
+  if (!session) return null;
+  // Anciennes sessions en vue groupe : rétablir un restaurant actif.
+  return session.activeRestaurantId ? session : buildSessionPayload(session.sub);
 }
 
 export async function requireUser(): Promise<SessionPayload> {
@@ -107,17 +110,9 @@ function hasGlobalTicketAccess(user: SessionPayload): boolean {
 
 export type TicketScope = { global: true } | { global: false; restaurantId: string };
 
-/**
- * Portée d'accès aux tickets : globale (SUPER_ADMIN ou module transverse "ticketing" — voit tous
- * les restaurants, sans avoir besoin d'un restaurant actif) ou locale (membre d'un restaurant,
- * limité à activeRestaurantId). Un utilisateur sans portée globale et sans restaurant actif n'a
- * aucun accès.
- */
+/** Les tickets sont toujours limités au restaurant actif. */
 export async function requireTicketAccess(): Promise<SessionPayload & { ticketScope: TicketScope }> {
   const user = await requireUser();
-  if (hasGlobalTicketAccess(user)) {
-    return { ...user, ticketScope: { global: true } };
-  }
   if (!user.activeRestaurantId) {
     throw new Error("NO_ACTIVE_RESTAURANT");
   }
@@ -139,22 +134,13 @@ function hasGlobalMarketingAccess(user: SessionPayload): boolean {
 
 export type MarketingScope = { global: true } | { global: false; restaurantId: string };
 
-/**
- * Portée d'accès marketing : globale (SUPER_ADMIN ou module transverse "marketing" — vue
- * consolidée réseau, sans restaurant actif requis) ou locale. Contrairement à Tickets/Canaux
- * (ouverts à tout membre), l'accès local est réservé à l'ADMIN du restaurant actif ou à une
- * permission "marketing" locale explicite (activeCanAccessMarketing) — mêmes règles que
- * Marges/Mercuriale/Crm, données clients et budget plus sensibles.
- */
+/** Marketing du restaurant actif, réservé aux comptes autorisés. */
 export async function requireMarketingAccess(): Promise<SessionPayload & { marketingScope: MarketingScope }> {
   const user = await requireUser();
-  if (hasGlobalMarketingAccess(user)) {
-    return { ...user, marketingScope: { global: true } };
-  }
   if (!user.activeRestaurantId) {
     throw new Error("NO_ACTIVE_RESTAURANT");
   }
-  if (user.activeRole !== "ADMIN" && !user.activeCanAccessMarketing) {
+  if (!hasGlobalMarketingAccess(user) && user.activeRole !== "ADMIN" && !user.activeCanAccessMarketing) {
     throw new Error("FORBIDDEN");
   }
   return { ...user, marketingScope: { global: false, restaurantId: user.activeRestaurantId } };
@@ -162,8 +148,7 @@ export async function requireMarketingAccess(): Promise<SessionPayload & { marke
 
 /**
  * Construit le payload de session complet pour un utilisateur : calcule le restaurant actif
- * (préféré s'il est valide, sinon auto-sélectionné si un seul restaurant accessible, sinon
- * aucun), son rôle/ses permissions locales sur ce restaurant, et ses modules à portée globale.
+ * (préféré s'il est valide, sinon premier restaurant accessible), son rôle/ses permissions locales sur ce restaurant, et ses modules à portée globale.
  * Utilisé au login, au changement de restaurant actif, et après modification du profil.
  */
 export async function buildSessionPayload(userId: string, preferredRestaurantId?: string | null): Promise<SessionPayload> {
@@ -196,16 +181,8 @@ export async function buildSessionPayload(userId: string, preferredRestaurantId?
     }));
   }
 
-  // undefined = non spécifié (login) -> auto-sélection si un seul restaurant accessible.
-  // null explicite = demande volontaire de vue réseau (SUPER_ADMIN) -> pas d'auto-sélection.
-  // string = restaurant demandé -> utilisé s'il est accessible, sinon aucun restaurant actif.
-  let activeRestaurantId: string | null = null;
-  if (preferredRestaurantId !== undefined) {
-    activeRestaurantId =
-      preferredRestaurantId && restaurants.some((r) => r.id === preferredRestaurantId) ? preferredRestaurantId : null;
-  } else if (restaurants.length === 1) {
-    activeRestaurantId = restaurants[0].id;
-  }
+  const activeRestaurantId = restaurants.find((r) => r.id === preferredRestaurantId)?.id
+    ?? restaurants[0]?.id ?? null;
 
   const activeMembership = user.memberships.find((m) => m.restaurantId === activeRestaurantId);
   const activeRole: "ADMIN" | "EMPLOYEE" | null = user.isSuperAdmin && activeRestaurantId
