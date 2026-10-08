@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { singleShiftSchema } from "@/lib/shiftValidation";
 import { checkShiftConflicts } from "@/lib/shiftWrites";
 import { prisma } from "@/lib/db";
-import { requireActiveRestaurant, requireAdmin } from "@/lib/auth";
+import { requirePlanningSession, requireAdmin } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
 export const GET = withErrorHandling(async (req: NextRequest) => {
-  const session = await requireActiveRestaurant();
+  const session = await requirePlanningSession();
   const { searchParams } = new URL(req.url);
   const start = searchParams.get("start");
   const end = searchParams.get("end");
@@ -14,6 +14,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
   const shifts = await prisma.shift.findMany({
     where: {
       employee: { restaurantId: session.activeRestaurantId },
+      ...(!session.isSuperAdmin && session.activeRole !== "ADMIN" ? { employeeId: session.employeeId ?? "__none__" } : {}),
       ...(start && end ? { date: { gte: start, lte: end } } : {}),
     },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],

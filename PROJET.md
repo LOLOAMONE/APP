@@ -170,3 +170,6 @@ Le logo officiel beige fourni est utilisé sans modification (`public/amone-logo
 - `/api/marketing/partners` (GET) et `/api/marketing/partners/[id]` (PUT) exigent l'accès Marketing et isolent les restaurants. Les dates sont validées ; l'identifiant source reste stable.
 - Recherche, filtres type/priorité/relance, fiches centrées Résumé / Qualification / Suivi et édition des informations. Les champs vides restent non renseignés et les données d'audience non vérifiées ne deviennent pas des métriques confirmées.
 - Import contrôlé du JSON AMONÉ : 50 profils UGC et 20 créateurs/influenceurs ; les 150 structures et 265 contacts commerciaux identiques au précédent import sont conservés. L'import conserve les sources, les oppositions et le suivi existant et ne déclenche aucun message.
+
+### Accès salariés — 8 octobre 2026
+Les comptes EMPLOYEE accèdent uniquement à leur planning personnel, leurs demandes de congés et les réglages de leur compte. La navigation masque le tableau de bord, les canaux, les notes et tous les autres modules ; le middleware bloque leurs pages et API même avec des permissions de module anciennes. Les API employés, horaires et absences filtrent côté serveur sur la fiche liée à l’utilisateur dans le restaurant actif, résolue depuis la base. Un compte sans fiche ne reçoit aucune donnée de l’équipe. La direction conserve la vue complète.

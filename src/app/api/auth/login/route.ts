@@ -29,6 +29,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
   const token = await createSessionToken(payload);
 
   const res = NextResponse.json({
+    activeRole: payload.activeRole,
     username: user.username,
     isSuperAdmin: user.isSuperAdmin,
     activeRestaurantId: payload.activeRestaurantId,

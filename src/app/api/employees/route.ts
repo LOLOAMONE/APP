@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireActiveRestaurant, requireAdmin, hashPassword } from "@/lib/auth";
+import { requirePlanningSession, requireAdmin, hashPassword } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
 const createEmployeeSchema = z.object({
@@ -13,10 +13,9 @@ const createEmployeeSchema = z.object({
 });
 
 export const GET = withErrorHandling(async () => {
-  // Accessible à tous les comptes connectés : l'employé doit voir toute l'équipe de son restaurant actif.
-  const session = await requireActiveRestaurant();
+  const session = await requirePlanningSession();
   const employees = await prisma.employee.findMany({
-    where: { restaurantId: session.activeRestaurantId },
+    where: { restaurantId: session.activeRestaurantId, ...(!session.isSuperAdmin && session.activeRole !== "ADMIN" ? { id: session.employeeId ?? "__none__" } : {}) },
     orderBy: { name: "asc" },
     select: {
       id: true,

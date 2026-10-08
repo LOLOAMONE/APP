@@ -1,10 +1,9 @@
-import { getCurrentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requirePlanningSession } from "@/lib/auth";
 import { PlanningClient } from "./PlanningClient";
 
 export default async function PlanningPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
+  const user = await requirePlanningSession();
+  
 
   return (
     <PlanningClient

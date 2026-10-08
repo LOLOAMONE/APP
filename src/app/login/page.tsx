@@ -29,7 +29,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
+      const session = await res.json();
+      router.push(!session.isSuperAdmin && session.activeRole === "EMPLOYEE" ? "/planning" : "/dashboard");
       router.refresh();
     } finally {
       setLoading(false);

@@ -72,6 +72,7 @@ async function requireModuleAccess(module: "marges" | "mercuriale" | "crm"): Pro
   if (!user.activeRestaurantId) {
     throw new Error("NO_ACTIVE_RESTAURANT");
   }
+  if (!user.isSuperAdmin && user.activeRole === "EMPLOYEE") throw new Error("FORBIDDEN");
   if (user.isSuperAdmin || user.activeRole === "ADMIN" || user.globalModules.includes(module)) {
     return user as SessionWithActiveRestaurant;
   }
@@ -116,6 +117,7 @@ export async function requireMarketingAccess(): Promise<SessionPayload & { marke
   if (!user.activeRestaurantId) {
     throw new Error("NO_ACTIVE_RESTAURANT");
   }
+  if (!user.isSuperAdmin && user.activeRole === "EMPLOYEE") throw new Error("FORBIDDEN");
   if (!hasGlobalMarketingAccess(user) && user.activeRole !== "ADMIN" && !user.activeCanAccessMarketing) {
     throw new Error("FORBIDDEN");
   }
@@ -187,4 +189,15 @@ export async function buildSessionPayload(userId: string, preferredRestaurantId?
     globalModules,
     restaurants,
   };
+}
+
+/** Résout la fiche personnelle depuis la base, sans faire confiance à un ancien cookie. */
+export async function requirePlanningSession(): Promise<SessionWithActiveRestaurant> {
+  const user = await requireActiveRestaurant();
+  if (user.isSuperAdmin || user.activeRole === "ADMIN") return user;
+  const employee = await prisma.employee.findFirst({
+    where: { userId: user.sub, restaurantId: user.activeRestaurantId },
+    select: { id: true },
+  });
+  return { ...user, employeeId: employee?.id ?? null };
 }

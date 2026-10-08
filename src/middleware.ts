@@ -51,6 +51,18 @@ export async function middleware(req: NextRequest) {
 
   const isLocalAdmin = session.activeRole === "ADMIN";
 
+  // Un salarié dispose uniquement de son planning et de son compte personnel.
+  if (session.activeRole === "EMPLOYEE") {
+    const allowed = pathname === "/planning"
+      || (pathname === "/api/employees" && req.method === "GET")
+      || (pathname === "/api/shifts" && req.method === "GET")
+      || (pathname === "/api/absences" && ["GET", "POST"].includes(req.method))
+      || pathname === "/api/account"
+      || pathname === "/api/session/switch-restaurant";
+    if (!allowed) return deny();
+  }
+
+
   if (USERS_PATHS.some((p) => pathname.startsWith(p)) && !isLocalAdmin) {
     return deny();
   }

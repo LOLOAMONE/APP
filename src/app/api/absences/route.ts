@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { planningDateSchema } from "@/lib/shiftValidation";
 import { prisma } from "@/lib/db";
-import { requireActiveRestaurant } from "@/lib/auth";
+import { requirePlanningSession } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
 
@@ -16,7 +16,7 @@ const absenceSchema = z.object({
 });
 
 export const GET = withErrorHandling(async (req: NextRequest) => {
-  const user = await requireActiveRestaurant();
+  const user = await requirePlanningSession();
   const isLocalAdmin = user.isSuperAdmin || user.activeRole === "ADMIN";
   const { searchParams } = new URL(req.url);
   const start = searchParams.get("start");
@@ -37,10 +37,11 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
   }
 
   if (start && end) {
-    // Utilisé pour l'affichage du calendrier: seules les absences validées sont montrées à toute l'équipe.
+    // Le calendrier salarié ne contient que ses propres absences validées.
     const absences = await prisma.absence.findMany({
       where: {
         status: "APPROVED",
+        ...(isLocalAdmin ? {} : { employeeId: user.employeeId ?? "__none__" }),
         startDate: { lte: end },
         endDate: { gte: start },
         employee: { restaurantId: user.activeRestaurantId },
@@ -61,7 +62,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
 });
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
-  const user = await requireActiveRestaurant();
+  const user = await requirePlanningSession();
   const isLocalAdmin = user.isSuperAdmin || user.activeRole === "ADMIN";
   const data = absenceSchema.parse(await req.json());
 

@@ -53,14 +53,14 @@ export function Sidebar({
 
 
   const TABS = [
-    { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, visible: true },
-    { href: "/marges", label: "Marges", icon: TrendingUp, visible: isAdmin || canAccessMarges },
-    { href: "/mercuriale", label: "Mercuriale", icon: Package, visible: isAdmin || canAccessMercuriale },
-    { href: "/clients", label: "Clients", icon: Users, visible: isAdmin || canAccessCrm },
+    { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard, visible: isAdmin },
+    { href: "/marges", label: "Marges", icon: TrendingUp, visible: isAdmin },
+    { href: "/mercuriale", label: "Mercuriale", icon: Package, visible: isAdmin },
+    { href: "/clients", label: "Clients", icon: Users, visible: isAdmin },
     { href: "/planning", label: "Planning", icon: CalendarDays, visible: true },
-    { href: "/canaux", label: "Canaux", icon: Hash, visible: true },
-    { href: "/notes", label: "Notes & tâches", icon: NotebookPen, visible: true },
-    { href: "/marketing", label: "Marketing", icon: Megaphone, visible: isAdmin || canAccessMarketing },
+    { href: "/canaux", label: "Canaux", icon: Hash, visible: isAdmin },
+    { href: "/notes", label: "Notes & tâches", icon: NotebookPen, visible: isAdmin },
+    { href: "/marketing", label: "Marketing", icon: Megaphone, visible: isAdmin },
   ];
   const visibleTabs = TABS.filter((tab) => tab.visible);
 
