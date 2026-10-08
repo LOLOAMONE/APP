@@ -23,8 +23,8 @@ export function SidebarNavItem({
       href={href}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-bento-sm px-3 py-2.5 text-sm font-medium transition ${
-        active ? "bg-white text-brand-800 shadow-bento" : "text-white/65 hover:bg-white/10 hover:text-white"
+      className={`flex items-center gap-3 rounded-full px-3 py-2.5 text-sm font-medium transition ${
+        active ? "bg-[#242520] text-white shadow-sm" : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
       }`}
     >
       <Icon className="h-4 w-4 shrink-0" aria-hidden />

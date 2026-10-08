@@ -1,3 +1,4 @@
+import { companyProfileSchema } from "@/lib/companyProfile";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -5,7 +6,8 @@ import { requireCrmAccess } from "@/lib/auth";
 import { withErrorHandling } from "@/lib/api";
 
 const companySchema = z.object({
-  name: z.string().min(1),
+  name: z.string().trim().min(1).max(200),
+  profile: companyProfileSchema.optional(),
   sector: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
@@ -25,7 +27,7 @@ export const GET = withErrorHandling(async () => {
 
 export const POST = withErrorHandling(async (req: NextRequest) => {
   const session = await requireCrmAccess();
-  const data = companySchema.parse(await req.json());
-  const company = await prisma.crmCompany.create({ data: { ...data, restaurantId: session.activeRestaurantId } });
+  const { profile, ...data } = companySchema.parse(await req.json());
+  const company = await prisma.crmCompany.create({ data: { ...data, profile: JSON.stringify(profile ?? {}), restaurantId: session.activeRestaurantId } });
   return NextResponse.json(company, { status: 201 });
 });

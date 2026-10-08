@@ -1,3 +1,4 @@
+import Image from "next/image";
 export function Brand({ compact = false }: { compact?: boolean }) {
-  return <span aria-label="Amoné" className="inline-flex flex-col"><span className={`${compact ? "text-2xl" : "text-4xl"} font-serif font-medium leading-none tracking-[-0.05em]`}>amonē<span className="text-[0.7em] text-current opacity-50">.</span></span>{!compact && <span className="mt-3 text-[9px] font-medium uppercase tracking-[0.32em] opacity-60">La maison, au quotidien</span>}</span>;
+  return <span className={`inline-flex items-center justify-center rounded-2xl bg-brand-600 ${compact ? "px-4 py-2" : "w-full px-5 py-4"}`}><Image src="/amone-logo-beige.png" alt="Amoné" width={3876} height={2106} unoptimized priority className={`${compact ? "w-24" : "w-28"} h-auto`} /></span>;
 }

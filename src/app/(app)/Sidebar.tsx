@@ -89,7 +89,7 @@ export function Sidebar({
     return (
       <div className="flex h-full w-full flex-col">
         <div className="flex items-center gap-3 px-5 pb-6 pt-7">
-          <div className="text-white"><Brand /></div>
+          <div className="text-slate-900"><Brand /></div>
         </div>
 
         {restaurants.length > 1 && (
@@ -107,19 +107,19 @@ export function Sidebar({
         )}
 
         <nav aria-label="Navigation principale" className="flex-1 space-y-1.5 overflow-y-auto px-3">
-          <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">Votre espace</p>
+          <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">Votre espace</p>
           {visibleTabs.map((tab) => (
             <SidebarNavItem key={tab.href} href={tab.href} label={tab.label} icon={tab.icon} onClick={onNavigate} />
           ))}
         </nav>
 
-        <div className="mt-auto space-y-2 border-t border-white/10 px-3 py-5">
+        <div className="mt-auto space-y-2 border-t border-slate-100 px-3 py-5">
           <div className="flex items-center justify-between gap-2 px-1 pt-1">
-            <div className="flex min-w-0 items-center gap-2.5"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-semibold text-white">{username.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><span className="block truncate text-sm font-medium text-white">{username}</span><span className="text-xs text-white/45">Mon compte</span></div></div>
+            <div className="flex min-w-0 items-center gap-2.5"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">{username.slice(0, 1).toUpperCase()}</span><div className="min-w-0"><span className="block truncate text-sm font-medium text-slate-700">{username}</span><span className="text-xs text-slate-400">Mon compte</span></div></div>
             <div className="flex shrink-0 items-center gap-1">
               <button
                 onClick={() => setShowSettings(true)}
-                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-white/60 hover:bg-white/10 hover:text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-slate-400 hover:bg-slate-100 hover:text-slate-900"
                 aria-label="Réglages"
                 title="Réglages"
               >
@@ -127,7 +127,7 @@ export function Sidebar({
               </button>
               <button
                 onClick={handleLogout}
-                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-white/60 hover:bg-white/10 hover:text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-bento-sm text-slate-400 hover:bg-slate-100 hover:text-slate-900"
                 aria-label="Déconnexion"
                 title="Déconnexion"
               >
@@ -142,7 +142,7 @@ export function Sidebar({
 
   return (
     <>
-      <aside className="app-sidebar sticky top-0 hidden h-screen w-64 shrink-0 lg:flex">
+      <aside className="app-sidebar sticky top-6 m-4 mr-0 hidden h-[calc(100vh-3rem)] w-52 shrink-0 rounded-[24px] lg:flex">
         {renderContent()}
       </aside>
 

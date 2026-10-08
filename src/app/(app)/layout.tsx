@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { AppHeader } from "./AppHeader";
 import { Sidebar } from "./Sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -9,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="app-shell flex min-h-screen flex-col lg:flex-row">
       <Sidebar
         userId={user.sub}
         isAdmin={user.isSuperAdmin || user.activeRole === "ADMIN"}
@@ -21,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         canAccessCrm={user.activeCanAccessCrm}
         canAccessMarketing={user.activeCanAccessMarketing}
       />
-      <main className="app-content min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-10 lg:py-10">{children}</main>
+      <main className="app-content min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-7"><AppHeader restaurant={user.restaurants.find((r) => r.id === user.activeRestaurantId)?.name || "Mon restaurant"} username={user.username} />{children}</main>
     </div>
   );
 }

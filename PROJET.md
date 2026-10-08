@@ -1,6 +1,6 @@
 # Amoné Nice — Documentation du projet
 
-État du code au 2026-10-07. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
+État du code au 2026-10-08. Ce document décrit ce qui existe aujourd'hui dans l'application (stack, fonctionnalités, modèles de données). Il sert de base pour le futur cahier des charges (évolutions à venir : migration PostgreSQL, sauvegardes automatiques, application desktop, intégrations externes...).
 
 ## Stack technique
 
@@ -146,9 +146,19 @@ Carnet clients simple pour les habitués, voisins et contacts d’entreprise. `/
 ### Carnet clients simplifié (7 octobre 2026)
 - /clients ouvre directement une liste de clients, avec recherche nom/entreprise/email/téléphone/étiquette/ville, filtres canal préféré et relances échues (date Paris). Les anciens contacts, entreprises et opportunités restent conservés ; les anciennes routes restent accessibles.
 - CrmContact conserve name pour compatibilité et ajoute prénom, nom, entreprise libre, adresse postale structurée, canal préféré, accords mail/WhatsApp/courrier (false par défaut), étiquettes, dernier contact, prochaine relance et anniversaire jour/mois sans année. Migration additive sans reconstruction ni suppression des données.
-- Interface Clients modernisée : liste compacte en colonnes sur ordinateur, cartes sur mobile, onglets Tous / À recontacter, filtre canal et tri par nom, entreprise ou relance. Fiche et édition dans un panneau latéral avec focus clavier, fermeture Échap et protection des modifications non enregistrées. Sections dépliables pour les détails. Actions Mail (mailto), WhatsApp (numéro international, conversion des numéros français à 10 chiffres), copie de l’adresse postale. Aucun message envoyé automatiquement ; les dates de contact se renseignent manuellement.
+- Interface Clients organisée par structure : liste ou cartes, filtres entreprises / clubs / à recontacter, priorité A et statut, recherche par structure ou interlocuteur. Les fiches centrées proposent Résumé, Contacts et Suivi. Les sources et données d’origine sont repliées ; les notes importées restent conservées et sont présentées sans les métadonnées techniques. Les contacts sans structure restent accessibles. Actions Mail et WhatsApp manuelles ; aucun message envoyé automatiquement.
 - Schéma de validation partagé entre POST et PUT contacts : limites de texte, email, dates réelles et anniversaire validés. Une entreprise liée doit appartenir au restaurant actif ; accès et isolation restaurant inchangés.
 
 ### Champs personnalisables du carnet clients
 
 La fiche client s’ouvre dans une fenêtre centrée, avec les accents bordeaux. « Gérer les champs » permet de masquer ou afficher les groupes standards et d’ajouter des champs texte, date, nombre ou case à cocher, puis de renommer les champs personnalisés. La configuration `Restaurant.clientFieldConfig` est propre à chaque restaurant ; les valeurs `CrmContact.customValues` sont conservées quand un champ est masqué. Les routes GET/PUT `/api/crm/fields` et la validation des contacts contrôlent les identifiants, les types et le périmètre restaurant. Le type des champs existants est conservé pour protéger les données.
+
+### Suivi des structures (8 octobre 2026)
+
+`CrmCompany.profile` conserve une configuration JSON validée (type entreprise/club/autre, priorité, statut, potentiel, idée AMONĒ, notes et dates de suivi). Les API de création et modification d’entreprises acceptent ce profil, avec validation des dates et périmètre restaurant. Les champs importés du contact principal alimentent le résumé tant qu’ils ne sont pas remplacés explicitement dans la fiche structure. Les notes et sources d’import ne sont ni supprimées ni remplacées lors de l’édition des notes visibles d’un contact.
+
+### Interface commune (8 octobre 2026)
+
+Tous les modules partagent une interface claire : fond gris doux, navigation blanche avec sélection charbon, cartes et champs arrondis, ombres discrètes et accents rouge Amoné (#7D1431). Le bandeau contextualise la page, le restaurant actif et le compte. Navigation mobile, permissions et comportements des modules sont conservés.
+
+Le logo officiel beige fourni est utilisé sans modification (`public/amone-logo-beige.png`) sur un cartouche rouge #7D1431.

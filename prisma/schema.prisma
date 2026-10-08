@@ -291,6 +291,7 @@ model Absence {
 // CRM pour les clients entreprises / événements (séminaires, groupes, privatisations) —
 // distinct des clients du quotidien qui ne sont pas suivis nommément.
 model CrmCompany {
+  profile       String @default("{}")
   id            String           @id @default(cuid())
   restaurantId  String
   restaurant    Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)

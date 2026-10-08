@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifySessionToken } from "@/lib/session";
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|login).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|amone-logo-beige.png|login).*)"],
 };
 
 const MARGES_PATHS = ["/marges", "/api/ingredients", "/api/products", "/api/menus", "/api/measure-units"];
