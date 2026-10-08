@@ -11,7 +11,7 @@ import { ShiftEditor, type PlanningEmployee as Employee, type PlanningShift as S
 
 type Absence = { id: string; employeeId: string; startDate: string; endDate: string; type: string; status: string; note: string | null };
 const ABSENCE_LABELS: Record<string, string> = { REPOS: "Jour off", CONGE_PAYE: "Congé payé", MALADIE: "Maladie", AUTRE: "Absence" };
-const ABSENCE_COLORS: Record<string, string> = { REPOS: "bg-emerald-50 text-emerald-800", CONGE_PAYE: "bg-blue-50 text-blue-800", MALADIE: "bg-amber-50 text-amber-800", AUTRE: "bg-gray-100 text-gray-700" };
+const ABSENCE_COLORS: Record<string, string> = { REPOS: "bg-gray-100 text-gray-700", CONGE_PAYE: "bg-blue-50 text-blue-800", MALADIE: "bg-amber-50 text-amber-800", AUTRE: "bg-gray-100 text-gray-700" };
 const employeeColors = ["border-brand-200 bg-brand-50 text-brand-800", "border-blue-200 bg-blue-50 text-blue-800", "border-emerald-200 bg-emerald-50 text-emerald-800", "border-amber-200 bg-amber-50 text-amber-800"];
 const hoursLabel = (hours: number) => `${hours.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} h`;
 
@@ -85,7 +85,7 @@ export function PlanningClient({ isAdmin, employeeId }: { isAdmin: boolean; empl
     const absence = absenceFor(emp.id, date); const dayShifts = shiftsFor(emp.id, date);
     const rest = emp.restDays?.includes((new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7);
     return <div className="space-y-2">
-      {rest && !absence && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">Jour off habituel{dayShifts.length ? " · Horaires à vérifier" : ""}</p>}
+      {rest && !absence && <p className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700">Jour off habituel{dayShifts.length ? " · Horaires à vérifier" : ""}</p>}
       {absence && <p className={`rounded-xl px-3 py-2 text-xs font-medium ${ABSENCE_COLORS[absence.type] ?? ABSENCE_COLORS.AUTRE}`}>{isAdmin || emp.id === employeeId ? ABSENCE_LABELS[absence.type] ?? "Absence" : "Absent"}</p>}
       {dayShifts.map((shift) => {
         const content = <><span className={`block whitespace-nowrap font-semibold tabular-nums ${large ? "text-lg" : "text-xs"}`}>{shift.startTime}{large ? " – " : "–"}{shift.endTime}</span><span className="mt-1 block text-xs opacity-75">{hoursLabel(hoursBetween(shift.startTime, shift.endTime))}{absence ? " · À vérifier : absence" : ""}</span></>;
