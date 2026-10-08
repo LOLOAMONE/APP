@@ -173,3 +173,6 @@ Le logo officiel beige fourni est utilisé sans modification (`public/amone-logo
 
 ### Accès salariés — 8 octobre 2026
 Les comptes EMPLOYEE accèdent uniquement à leur planning personnel, leurs demandes de congés et les réglages de leur compte. La navigation masque le tableau de bord, les canaux, les notes et tous les autres modules ; le middleware bloque leurs pages et API même avec des permissions de module anciennes. Les API employés, horaires et absences filtrent côté serveur sur la fiche liée à l’utilisateur dans le restaurant actif, résolue depuis la base. Un compte sans fiche ne reçoit aucune donnée de l’équipe. La direction conserve la vue complète.
+
+### Application du planning de base — 8 octobre 2026
+Une boîte de dialogue propose de conserver les jours déjà planifiés ou de remplacer les horaires de la semaine pour les salariés ayant un planning de base. Le remplacement est transactionnel, limité au restaurant actif et à la semaine sélectionnée ; les salariés sans modèle ne sont pas modifiés. Les jours off et absences validées excluent toujours la création de créneaux de base. Le mode par défaut de l’API reste la conservation.
