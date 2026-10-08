@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
-export function ClientPanel({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function ClientPanel({ title, onClose, children, breadcrumb = "Clients / Carnet" }: { breadcrumb?: string; title: string; onClose: () => void; children: React.ReactNode }) {
   const panel = useRef<HTMLDivElement>(null);
   const close = useRef(onClose);
   close.current = onClose;
@@ -22,5 +22,5 @@ export function ClientPanel({ title, onClose, children }: { title: string; onClo
     document.addEventListener("keydown", keydown);
     return () => { document.body.style.overflow = overflow; document.removeEventListener("keydown", keydown); previous?.focus(); };
   }, []);
-  return <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"><button aria-label="Fermer la fiche client" onClick={onClose} className="absolute inset-0 bg-slate-900/20 backdrop-blur-[1px]" tabIndex={-1} /><div ref={panel} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl outline-none"><header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-6 py-5"><div className="min-w-0"><p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Clients / Carnet</p><h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2></div><button aria-label="Fermer" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></header><div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div></div></div>;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6"><button aria-label="Fermer la fiche client" onClick={onClose} className="absolute inset-0 bg-slate-900/20 backdrop-blur-[1px]" tabIndex={-1} /><div ref={panel} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl outline-none"><header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-6 py-5"><div className="min-w-0"><p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">{breadcrumb}</p><h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2></div><button aria-label="Fermer" onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></header><div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div></div></div>;
 }

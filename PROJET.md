@@ -162,3 +162,11 @@ La fiche client s’ouvre dans une fenêtre centrée, avec les accents bordeaux.
 Tous les modules partagent une interface claire : fond gris doux, navigation blanche avec sélection charbon, cartes et champs arrondis, ombres discrètes et accents rouge Amoné (#7D1431). Le bandeau contextualise la page, le restaurant actif et le compte. Navigation mobile, permissions et comportements des modules sont conservés.
 
 Le logo officiel beige fourni est utilisé sans modification (`public/amone-logo-beige.png`) sur un cartouche rouge #7D1431.
+
+## Partenaires marketing (8 octobre 2026)
+
+- `/marketing/partenaires` regroupe les profils UGC et créateurs, séparés des prospects commerciaux. Accès depuis le calendrier Marketing.
+- Modèle `MarketingPartner`, rattaché au restaurant, identifiant source unique par restaurant, informations d'origine en JSON, statut, dates de contact/relance, opposition et notes de suivi.
+- `/api/marketing/partners` (GET) et `/api/marketing/partners/[id]` (PUT) exigent l'accès Marketing et isolent les restaurants. Les dates sont validées ; l'identifiant source reste stable.
+- Recherche, filtres type/priorité/relance, fiches centrées Résumé / Qualification / Suivi et édition des informations. Les champs vides restent non renseignés et les données d'audience non vérifiées ne deviennent pas des métriques confirmées.
+- Import contrôlé du JSON AMONÉ : 50 profils UGC et 20 créateurs/influenceurs ; les 150 structures et 265 contacts commerciaux identiques au précédent import sont conservés. L'import conserve les sources, les oppositions et le suivi existant et ne déclenche aucun message.
